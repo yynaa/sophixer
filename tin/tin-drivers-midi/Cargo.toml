@@ -1,0 +1,15 @@
+[package]
+name = "tin-drivers-midi"
+description = "tin lib for midi drivers"
+workspace = ".."
+
+repository.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+thiserror = { workspace = true }
+log = { workspace = true }
+midir = "0.10.2"
