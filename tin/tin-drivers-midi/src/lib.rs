@@ -1,12 +1,28 @@
-pub mod devices;
+//! *this crate contains drivers for accessing midi devices*
+//!
+//! you can find examples [here](crate::examples)
 
+#[macro_use]
+extern crate log;
 use std::collections::VecDeque;
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use thiserror::Error;
+
+pub mod devices;
+#[allow(unused)]
+#[cfg(feature = "examples")]
+pub mod examples;
 
 /// trait for device position transformers
 pub trait MidiPhysicalPosition: Debug {
     fn to_raw(&self) -> Result<u8, MidiDriverError>;
+}
+
+/// enum for a physical position's state
+#[derive(Clone, Debug)]
+pub enum MidiPhysicalState {
+    Binary(bool),
+    Analog8(u8),
 }
 
 /// trait for wrapping midi messages from an input device
@@ -32,7 +48,13 @@ pub trait MidiVisual: Sized {
 ///
 /// visual transformations are made like this, because a minimal amount of midi messages must be sent to avoid blinking
 /// this greatly simplifies code down the line!
-pub trait MidiDriver<I: MidiInputMessage, O: MidiOutputMessage, V: MidiVisual>: Sized {
+pub trait MidiDriver<
+    I: MidiInputMessage,
+    O: MidiOutputMessage,
+    V: MidiVisual,
+    P: MidiPhysicalPosition,
+>: Sized
+{
     /// connect to the device
     fn connect() -> Result<Self, MidiDriverError>;
     /// close contact with the device (ensures the device does not get stuck)
@@ -40,6 +62,9 @@ pub trait MidiDriver<I: MidiInputMessage, O: MidiOutputMessage, V: MidiVisual>: 
 
     /// read all input messages
     fn read(&mut self) -> Result<VecDeque<I>, MidiDriverError>;
+    /// get position state
+    fn get_position_state(&self, pos: P) -> Result<MidiPhysicalState, MidiDriverError>;
+
     /// send an output message
     fn send(&mut self, msg: O) -> Result<(), MidiDriverError>;
 
@@ -84,4 +109,8 @@ pub enum MidiDriverError {
     /// invalid position in position transformer
     #[error("invalid position on device {0}: {1}")]
     InvalidPosition(String, String),
+
+    /// invalid visual
+    #[error("invalid visual on device {0}: {1}")]
+    InvalidVisual(String, String),
 }

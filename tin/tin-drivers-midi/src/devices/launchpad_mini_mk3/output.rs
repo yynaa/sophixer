@@ -1,6 +1,7 @@
 use crate::devices::launchpad_mini_mk3::visual::LPM3Visual;
 use crate::{MidiDriverError, MidiOutputMessage, MidiPhysicalPosition};
 
+#[derive(Debug)]
 pub enum LPM3OutputMessage {
     Raw(Vec<u8>),
     SendColors(Vec<LPM3Visual>),
@@ -21,8 +22,11 @@ impl MidiOutputMessage for LPM3OutputMessage {
                         LPM3Visual::Flashing(pos, a, b) => {
                             result.append(&mut vec![1, pos.to_raw()?, a, b]);
                         }
+                        LPM3Visual::Pulsing(pos, color) => {
+                            result.append(&mut vec![2, pos.to_raw()?, color]);
+                        }
                         LPM3Visual::RGB(pos, r, g, b) => {
-                            result.append(&mut vec![2, pos.to_raw()?, r, g, b])
+                            result.append(&mut vec![3, pos.to_raw()?, r, g, b])
                         }
                     }
                 }

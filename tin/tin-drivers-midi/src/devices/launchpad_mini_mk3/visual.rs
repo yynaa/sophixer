@@ -6,6 +6,7 @@ pub enum LPM3Visual {
     Off(LPM3Position),
     Static(LPM3Position, u8),
     Flashing(LPM3Position, u8, u8),
+    Pulsing(LPM3Position, u8),
     RGB(LPM3Position, u8, u8, u8),
 }
 
@@ -15,6 +16,7 @@ impl MidiVisual for LPM3Visual {
             Self::Off(p) => p.to_raw(),
             Self::Static(p, _) => p.to_raw(),
             Self::Flashing(p, _, _) => p.to_raw(),
+            Self::Pulsing(p, _) => p.to_raw(),
             Self::RGB(p, _, _, _) => p.to_raw(),
         }
     }
@@ -24,6 +26,7 @@ impl MidiVisual for LPM3Visual {
             Self::Off(_) => true,
             Self::Static(_, v) => *v == 0,
             Self::Flashing(_, a, b) => *a == 0 && *b == 0,
+            Self::Pulsing(_, v) => *v == 0,
             Self::RGB(_, r, g, b) => *r == 0 && *g == 0 && *b == 0,
         }
     }

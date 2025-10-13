@@ -1,12 +1,12 @@
 #[macro_use]
 extern crate log;
 extern crate pretty_env_logger;
+
 use anyhow::Result;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tin_drivers_midi::devices::launchpad_mini_mk3::driver::LPM3Driver;
-use tin_drivers_midi::devices::launchpad_mini_mk3::input::LPM3InputMessage;
-use tin_drivers_midi::devices::launchpad_mini_mk3::visual::LPM3Visual;
+use tin_drivers_midi::devices::launch_control_xl_mk2::driver::LCXL2Driver;
+use tin_drivers_midi::devices::launchpad_mini_mk3::LPM3Driver;
 use tin_drivers_midi::MidiDriver;
 
 fn main() -> Result<()> {
@@ -20,21 +20,13 @@ fn main() -> Result<()> {
         r.store(false, Ordering::SeqCst);
     })?;
 
-    let mut lm3driver = LPM3Driver::connect()?;
-    lm3driver.clear()?;
+    let mut lpm3driver = LPM3Driver::connect()?;
+    let mut lcxl2driver = LCXL2Driver::connect()?;
 
-    info!("Tin running...");
-    while running.load(Ordering::SeqCst) {
-        let mut d = lm3driver.read()?;
-        while let Some(msg) = d.pop_front() {
-            match msg {
-                LPM3InputMessage::KeyPressed(pos) => lm3driver.add(LPM3Visual::Static(pos, 3))?,
-                LPM3InputMessage::KeyReleased(pos) => lm3driver.add(LPM3Visual::Off(pos))?,
-            }
-        }
-        lm3driver.push()?;
-    }
+    info!("running...");
+    while running.load(Ordering::SeqCst) {}
 
-    lm3driver.close()?;
+    lpm3driver.close()?;
+    lcxl2driver.close()?;
     Ok(())
 }

@@ -5,6 +5,11 @@ pub mod input;
 pub mod output;
 pub mod visual;
 
+pub use driver::LPM3Driver;
+pub use input::LPM3InputMessage;
+pub use output::LPM3OutputMessage;
+pub use visual::LPM3Visual;
+
 /// position of a key on the pad
 #[derive(Debug, Clone)]
 pub enum LPM3Position {

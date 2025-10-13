@@ -1,7 +1,7 @@
-use crate::devices::launchpad_mini_mk3::input::LPM3InputMessage;
-use crate::devices::launchpad_mini_mk3::output::LPM3OutputMessage;
-use crate::devices::launchpad_mini_mk3::visual::LPM3Visual;
-use crate::devices::launchpad_mini_mk3::LPM3Position;
+use crate::devices::launch_control_xl_mk2::input::LCXL2InputMessage;
+use crate::devices::launch_control_xl_mk2::output::LCXL2OutputMessage;
+use crate::devices::launch_control_xl_mk2::visual::LCXL2Visual;
+use crate::devices::launch_control_xl_mk2::LCXL2Position;
 use crate::devices::{get_in_port, get_out_port};
 use crate::{
     MidiDriver, MidiDriverError, MidiInputMessage, MidiOutputMessage, MidiPhysicalPosition,
@@ -11,36 +11,36 @@ use midir::{MidiInputConnection, MidiOutputConnection};
 use std::collections::{HashMap, VecDeque};
 use std::sync::mpsc;
 
-pub struct LPM3Driver {
+pub struct LCXL2Driver {
     _conn_in: MidiInputConnection<()>,
     conn_out: MidiOutputConnection,
-    rx: mpsc::Receiver<LPM3InputMessage>,
+    rx: mpsc::Receiver<LCXL2InputMessage>,
 
-    effective_visual: HashMap<u8, LPM3Visual>,
-    queued_visual_changes: HashMap<u8, LPM3Visual>,
+    effective_visual: HashMap<u8, LCXL2Visual>,
+    queued_visual_changes: HashMap<u8, LCXL2Visual>,
 
     physical_states: HashMap<u8, MidiPhysicalState>,
 }
 
-impl MidiDriver<LPM3InputMessage, LPM3OutputMessage, LPM3Visual, LPM3Position> for LPM3Driver {
+impl MidiDriver<LCXL2InputMessage, LCXL2OutputMessage, LCXL2Visual, LCXL2Position> for LCXL2Driver {
     fn connect() -> Result<Self, MidiDriverError> {
-        debug!("LPM3 -- starting driver...");
+        debug!("LCXL2 -- starting driver...");
 
-        let (midi_in, in_port) = get_in_port("(LPMiniMK3 MIDI)")?;
-        let (midi_out, out_port) = get_out_port("(LPMiniMK3 MIDI)")?;
+        let (midi_in, in_port) = get_in_port("2- Launch Control XL")?;
+        let (midi_out, out_port) = get_out_port("2- Launch Control XL")?;
 
         let conn_out = midi_out
-            .connect(&out_port, "LPMiniMK3 MIDI output writer")
+            .connect(&out_port, "LCXL2 MIDI output writer")
             .map_err(MidiDriverError::MidirConnectOutputError)?;
 
-        let (tx, rx) = mpsc::channel::<LPM3InputMessage>();
+        let (tx, rx) = mpsc::channel::<LCXL2InputMessage>();
 
         let _conn_in = midi_in
             .connect(
                 &in_port,
                 "input-reader",
                 move |_, raw_message, _| {
-                    if let Some(message) = LPM3InputMessage::from_raw(raw_message) {
+                    if let Some(message) = LCXL2InputMessage::from_raw(raw_message) {
                         let _ = tx.send(message);
                     }
                 },
@@ -49,11 +49,11 @@ impl MidiDriver<LPM3InputMessage, LPM3OutputMessage, LPM3Visual, LPM3Position> f
             .map_err(MidiDriverError::MidirConnectInputError)?;
 
         let mut physical_states = HashMap::new();
-        for y in 1..=9 {
-            for x in 1..=9 {
-                if x != y && y != 9 {
-                    physical_states.insert(y * 10 + x, MidiPhysicalState::Binary(false));
-                }
+        for r in 0..56 {
+            if LCXL2Position::is_analog_raw(&r) {
+                physical_states.insert(r, MidiPhysicalState::Analog8(0));
+            } else {
+                physical_states.insert(r, MidiPhysicalState::Binary(false));
             }
         }
 
@@ -66,11 +66,6 @@ impl MidiDriver<LPM3InputMessage, LPM3OutputMessage, LPM3Visual, LPM3Position> f
             physical_states,
         };
 
-        // turning off DAW mode
-        s.send(LPM3OutputMessage::Raw(vec![
-            240, 0, 32, 41, 2, 13, 16, 0, 247,
-        ]))?;
-
         // clear
         s.clear()?;
         s.push()?;
@@ -79,7 +74,7 @@ impl MidiDriver<LPM3InputMessage, LPM3OutputMessage, LPM3Visual, LPM3Position> f
     }
 
     fn close(&mut self) -> Result<(), MidiDriverError> {
-        debug!("LPM3 -- closing driver...");
+        debug!("LCXL2 -- closing driver...");
 
         self.clear()?;
         self.push()?;
@@ -87,30 +82,48 @@ impl MidiDriver<LPM3InputMessage, LPM3OutputMessage, LPM3Visual, LPM3Position> f
         Ok(())
     }
 
-    fn read(&mut self) -> Result<VecDeque<LPM3InputMessage>, MidiDriverError> {
+    fn read(&mut self) -> Result<VecDeque<LCXL2InputMessage>, MidiDriverError> {
         let mut q = VecDeque::new();
+
+        let mut analog_messages = HashMap::new();
 
         loop {
             match self.rx.try_recv() {
-                Ok(msg) => {
-                    match &msg {
-                        LPM3InputMessage::KeyPressed(pos) => self
-                            .physical_states
-                            .insert(pos.to_raw()?, MidiPhysicalState::Binary(true)),
-                        LPM3InputMessage::KeyReleased(pos) => self
-                            .physical_states
-                            .insert(pos.to_raw()?, MidiPhysicalState::Binary(false)),
-                    };
-                    q.push_back(msg);
-                }
+                Ok(msg) => match &msg {
+                    LCXL2InputMessage::Analog(pos, value) => {
+                        analog_messages.insert(
+                            pos.to_raw()?,
+                            LCXL2InputMessage::Analog(pos.clone(), *value),
+                        );
+                    }
+                    LCXL2InputMessage::KeyPressed(pos) => {
+                        self.physical_states
+                            .insert(pos.to_raw()?, MidiPhysicalState::Binary(true));
+                        q.push_back(msg);
+                    }
+                    LCXL2InputMessage::KeyReleased(pos) => {
+                        self.physical_states
+                            .insert(pos.to_raw()?, MidiPhysicalState::Binary(false));
+                        q.push_back(msg);
+                    }
+                },
                 Err(_) => break,
             }
+        }
+
+        for (k, v) in analog_messages {
+            let LCXL2InputMessage::Analog(_, value) = v else {
+                unreachable!("this will never not be Analog")
+            };
+            self.physical_states
+                .insert(k, MidiPhysicalState::Analog8(value));
+            q.push_back(v);
         }
 
         Ok(q)
     }
 
-    fn get_position_state(&self, pos: LPM3Position) -> Result<MidiPhysicalState, MidiDriverError> {
+    fn get_position_state(&self, pos: LCXL2Position) -> Result<MidiPhysicalState, MidiDriverError> {
         let raw = pos.to_raw()?;
         self.physical_states
             .get(&raw)
@@ -121,8 +134,8 @@ impl MidiDriver<LPM3InputMessage, LPM3OutputMessage, LPM3Visual, LPM3Position> f
             .map(|t| t.clone())
     }
 
-    fn send(&mut self, msg: LPM3OutputMessage) -> Result<(), MidiDriverError> {
-        trace!("LPM3 -- sending message: {:?}", msg);
+    fn send(&mut self, msg: LCXL2OutputMessage) -> Result<(), MidiDriverError> {
+        trace!("LCXL2 -- sending message: {:?}", msg);
         self.conn_out
             .send(&msg.to_raw()?)
             .map_err(MidiDriverError::MidirSendError)
@@ -133,7 +146,7 @@ impl MidiDriver<LPM3InputMessage, LPM3OutputMessage, LPM3Visual, LPM3Position> f
     }
 
     fn push(&mut self) -> Result<(), MidiDriverError> {
-        let mut v: Vec<LPM3Visual> = Vec::new();
+        let mut v: Vec<LCXL2Visual> = Vec::new();
 
         for (change_pos, change_visual) in self.queued_visual_changes.iter() {
             if let Some(current_visual) = self.effective_visual.get(&change_pos) {
@@ -150,7 +163,7 @@ impl MidiDriver<LPM3InputMessage, LPM3OutputMessage, LPM3Visual, LPM3Position> f
         }
 
         if v.len() > 0 {
-            self.send(LPM3OutputMessage::SendColors(v))?;
+            self.send(LCXL2OutputMessage::SendColors(v))?;
             self.pop();
         }
         Ok(())
@@ -158,15 +171,13 @@ impl MidiDriver<LPM3InputMessage, LPM3OutputMessage, LPM3Visual, LPM3Position> f
 
     fn clear(&mut self) -> Result<(), MidiDriverError> {
         self.pop();
-        for y in 1..=9 {
-            for x in 1..=9 {
-                self.add(LPM3Visual::Off(LPM3Position::Raw(y * 10 + x)))?;
-            }
+        for r in 1..48 {
+            self.add(LCXL2Visual::Off(LCXL2Position::Raw(r)))?;
         }
         Ok(())
     }
 
-    fn add(&mut self, visual: LPM3Visual) -> Result<(), MidiDriverError> {
+    fn add(&mut self, visual: LCXL2Visual) -> Result<(), MidiDriverError> {
         let p = visual.get_raw_pos()?;
         self.queued_visual_changes.insert(p, visual);
         Ok(())

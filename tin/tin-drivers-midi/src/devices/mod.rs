@@ -1,8 +1,12 @@
+//! supported devices
+
 use crate::MidiDriverError;
 use midir::{Ignore, MidiInput, MidiInputPort, MidiOutput, MidiOutputPort};
 
+pub mod launch_control_xl_mk2;
 pub mod launchpad_mini_mk3;
 
+/// returns in port from a device's partial name
 pub fn get_in_port(device: &str) -> Result<(MidiInput, MidiInputPort), MidiDriverError> {
     let mut midi_in = MidiInput::new(&format!("{} tin-driver input", device))
         .map_err(MidiDriverError::MidirInitError)?;
@@ -22,6 +26,7 @@ pub fn get_in_port(device: &str) -> Result<(MidiInput, MidiInputPort), MidiDrive
     Err(MidiDriverError::MidiNotFound(device.to_string()))
 }
 
+/// returns out port from a device's partial name
 pub fn get_out_port(device: &str) -> Result<(MidiOutput, MidiOutputPort), MidiDriverError> {
     let midi_out = MidiOutput::new(&format!("{} tin-driver output", device))
         .map_err(MidiDriverError::MidirInitError)?;
