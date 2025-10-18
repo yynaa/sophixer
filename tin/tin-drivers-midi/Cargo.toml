@@ -1,7 +1,6 @@
 [package]
 name = "tin-drivers-midi"
 description = "tin lib for midi drivers"
-version = ""
 workspace = ".."
 
 repository.workspace = true

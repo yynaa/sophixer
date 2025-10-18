@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "tin-drivers-midi"
+    "tin-drivers-midi",
+    "tin-intercom"
 ]
 resolver = "3"
 
@@ -27,6 +28,7 @@ version.workspace = true
 [dependencies]
 anyhow = { workspace = true }
 log = { workspace = true }
-tin-drivers-midi = { path = "tin-drivers-midi", features = ["examples"] }
+tin-drivers-midi = { path = "tin-drivers-midi" }
+tin-intercom = { path = "tin-intercom" }
 ctrlc = "3.5.0"
 pretty_env_logger = "0.5.0"
