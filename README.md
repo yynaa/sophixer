@@ -15,7 +15,7 @@ A rust server that sends and receives messages for everyone.
 
 Handles matrix queueing, track control, line callbacks...
 
-#### 🔷 Bismuth 🔷 - A 3DS app (Not yet ported from alpha2)
+#### 🔷 Bismuth 🔷 - A 3DS app
 
 Gives a fantastic portable interface for managing songs and routing.
 

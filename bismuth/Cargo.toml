@@ -1,0 +1,12 @@
+[package]
+repository = "https://github.com/yynaa/sophixer"
+authors = ["yyna <me@yyna.xyz>"]
+license = "MIT"
+version = "0.1.0"
+edition = "2021"
+name = "bismuth"
+
+[dependencies]
+ansi-escapes = "0.2.0"
+ansi_term = "0.12.1"
+ctru-rs = { git = "https://github.com/rust3ds/ctru-rs/" }
