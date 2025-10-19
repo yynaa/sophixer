@@ -20,6 +20,7 @@ pub fn get_in_port(device: &str) -> Result<(MidiInput, MidiInputPort), MidiDrive
             .port_name(&p)
             .map_err(MidiDriverError::MidirPortInfoError)?;
         if port_name.contains(device) {
+            trace!("found port {port_name}");
             return Ok((midi_in, p));
         }
     }

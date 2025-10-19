@@ -26,8 +26,8 @@ impl MidiDriver<LCXL2InputMessage, LCXL2OutputMessage, LCXL2Visual, LCXL2Positio
     fn connect() -> Result<Self, MidiDriverError> {
         debug!("LCXL2 -- starting driver...");
 
-        let (midi_in, in_port) = get_in_port("2- Launch Control XL")?;
-        let (midi_out, out_port) = get_out_port("2- Launch Control XL")?;
+        let (midi_in, in_port) = get_in_port("Launch Control XL")?;
+        let (midi_out, out_port) = get_out_port("Launch Control XL")?;
 
         let conn_out = midi_out
             .connect(&out_port, "LCXL2 MIDI output writer")
