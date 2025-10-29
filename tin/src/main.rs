@@ -15,7 +15,7 @@ use std::sync::Arc;
 use tin_drivers_midi::devices::launch_control_xl_mk2::driver::LCXL2Driver;
 use tin_drivers_midi::devices::launchpad_mini_mk3::LPM3Driver;
 use tin_drivers_midi::MidiDriver;
-use tin_intercom::Server;
+use intercom::Server;
 
 fn main() -> Result<()> {
     pretty_env_logger::init();

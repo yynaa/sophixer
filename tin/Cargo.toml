@@ -1,22 +1,3 @@
-[workspace]
-members = [
-    "tin-drivers-midi",
-    "tin-intercom"
-]
-resolver = "3"
-
-[workspace.package]
-repository = "https://github.com/yynaa/sophixer"
-authors = ["yyna <me@yyna.xyz>"]
-license = "MIT"
-version = "0.1.0"
-edition = "2021"
-
-[workspace.dependencies]
-anyhow = "1.0.98"
-thiserror = "2.0.17"
-log = "0.4.28"
-
 [package]
 name = "tin"
 repository.workspace = true
@@ -24,12 +5,13 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 version.workspace = true
+workspace = ".."
 
 [dependencies]
 anyhow = { workspace = true }
 log = { workspace = true }
 tin-drivers-midi = { path = "tin-drivers-midi" }
-tin-intercom = { path = "tin-intercom" }
+intercom = { path = "../common/intercom" }
 ctrlc = "3.5.0"
 pretty_env_logger = "0.5.0"
 argparse = "0.2.2"

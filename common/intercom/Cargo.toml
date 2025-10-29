@@ -1,8 +1,7 @@
 [package]
-name = "tin-intercom"
+name = "intercom"
 description = "tin lib for communication with other software through tcp & udp"
-workspace = ".."
-
+workspace = "../.."
 repository.workspace = true
 edition.workspace = true
 authors.workspace = true

@@ -3,7 +3,7 @@ use std::net::UdpSocket;
 use std::str::FromStr;
 use std::thread::sleep;
 use std::time::Duration;
-use tin_intercom::{
+use intercom::{
     InterCommunicator, InterError, InterMessageIncoming, InterMessageOutgoing, Server,
 };
 
