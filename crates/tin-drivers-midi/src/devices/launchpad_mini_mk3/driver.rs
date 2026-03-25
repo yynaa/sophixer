@@ -26,8 +26,8 @@ impl MidiDriver<LPM3InputMessage, LPM3OutputMessage, LPM3Visual, LPM3Position> f
   fn connect() -> Result<Self, MidiDriverError> {
     debug!("LPM3 -- starting driver...");
 
-    let (midi_in, in_port) = get_in_port("Launchpad Mini MK3")?;
-    let (midi_out, out_port) = get_out_port("Launchpad Mini MK3")?;
+    let (midi_in, in_port) = get_in_port("LPMiniMK3 MI")?;
+    let (midi_out, out_port) = get_out_port("LPMiniMK3 MI")?;
 
     let conn_out = midi_out
       .connect(&out_port, "LPMiniMK3 MIDI output writer")
@@ -51,7 +51,7 @@ impl MidiDriver<LPM3InputMessage, LPM3OutputMessage, LPM3Visual, LPM3Position> f
     let mut physical_states = HashMap::new();
     for y in 1..=9 {
       for x in 1..=9 {
-        if x != y && y != 9 {
+        if !(x == 9 && y == 9) {
           physical_states.insert(y * 10 + x, MidiPhysicalState::Binary(false));
         }
       }
@@ -116,7 +116,7 @@ impl MidiDriver<LPM3InputMessage, LPM3OutputMessage, LPM3Visual, LPM3Position> f
       .physical_states
       .get(&raw)
       .ok_or(MidiDriverError::InvalidPosition(
-        "Launch Control XL MK2".to_string(),
+        "Launchpad Mini MK3".to_string(),
         format!("{} as a button", raw),
       ))
       .map(|t| t.clone())

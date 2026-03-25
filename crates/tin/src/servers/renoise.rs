@@ -1,4 +1,4 @@
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::Result;
 use intercom::server::{udp::UdpServer, InterServerCommunicator};
@@ -50,6 +50,7 @@ impl RenoiseCommunicator {
               }
             }
             model.renoise_instance_ids.remove_by_right(&from);
+            model.renoise_instance_focus = None;
             info!("renoise instance from {} disconnected", from);
           }
         }

@@ -8,6 +8,7 @@ mod views;
 use crate::model::TinModel;
 use crate::servers::bismuth::BismuthCommunicator;
 use crate::servers::renoise::RenoiseCommunicator;
+use crate::views::lcxl2_panel::ViewLCXL2Panel;
 use crate::views::lpm3_matrix::ViewLPM3Matrix;
 use anyhow::Result;
 use argparse::{ArgumentParser, Store};
@@ -53,6 +54,7 @@ fn main() -> Result<()> {
 
   let mut server = UdpServer::start("0.0.0.0:3000")?;
 
+  let mut view_lcxl2_panel = ViewLCXL2Panel::new();
   let mut view_lpm3_matrix = ViewLPM3Matrix::new();
 
   let mut instant = Instant::now();
@@ -66,11 +68,21 @@ fn main() -> Result<()> {
     RenoiseCommunicator::update_model(&mut tin, &server)?;
     BismuthCommunicator::update_model(&mut tin, &server)?;
 
-    view_lpm3_matrix.update(&delta_time, &mut tin, &mut lpm3driver)?;
+    let lpm3_inputs = lpm3driver.read()?;
+    let lcxl2_inputs = lcxl2driver.read()?;
+
+    view_lcxl2_panel.update(
+      &delta_time,
+      &mut tin,
+      &mut lcxl2driver,
+      lcxl2_inputs.clone(),
+    )?;
+    view_lpm3_matrix.update(&delta_time, &mut tin, &mut lpm3driver, lpm3_inputs.clone())?;
 
     lpm3driver.clear()?;
     lcxl2driver.clear()?;
 
+    view_lcxl2_panel.draw(&tin, &mut lcxl2driver)?;
     view_lpm3_matrix.draw(&tin, &mut lpm3driver)?;
 
     lpm3driver.push()?;

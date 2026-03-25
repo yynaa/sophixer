@@ -13,7 +13,8 @@ pub struct Communicator;
 impl InterClientCommunicator<Udp3dsClient, MessageToBismuth, MessageFromBismuth> for Communicator {}
 
 impl Communicator {
-  pub fn update_model(model: &mut BismuthModel, client: &Udp3dsClient) -> Result<()> {
+  pub fn update_model(model: &mut BismuthModel, client: &Udp3dsClient) -> Result<bool> {
+    let mut rerender = false;
     let messages = Self::get_messages(client);
     if let Some(messages) = messages {
       for msg in messages {
@@ -24,6 +25,7 @@ impl Communicator {
           MessageToBismuth::InitSet { name, authors } => {
             model.set = Some(Set::new(name.clone(), authors.clone())?);
             info!("received set {} by {}", name, authors);
+            rerender = true;
           }
           MessageToBismuth::InitSong {
             id,
@@ -41,19 +43,22 @@ impl Communicator {
             } else {
               warn!("ignored song init, since no set was initialized")
             }
+            rerender = true;
           }
           MessageToBismuth::RenoiseInstanceAdded(id) => {
             model.renoise_instances.insert(id.clone());
             info!("renoise instance {} added", id);
+            rerender = true;
           }
           MessageToBismuth::RenoiseInstanceRemoved(id) => {
             model.renoise_instances.remove(&id);
             info!("renoise instance {} removed", id);
+            rerender = true;
           }
         }
       }
     }
 
-    Ok(())
+    Ok(rerender)
   }
 }

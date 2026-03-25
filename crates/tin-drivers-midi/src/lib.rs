@@ -26,7 +26,7 @@ pub enum MidiPhysicalState {
 }
 
 /// trait for wrapping midi messages from an input device
-pub trait MidiInputMessage: Sized {
+pub trait MidiInputMessage: Sized + PartialEq + Eq {
   fn from_raw(raw: &[u8]) -> Option<Self>;
 }
 

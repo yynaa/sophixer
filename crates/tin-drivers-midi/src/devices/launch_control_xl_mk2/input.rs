@@ -1,7 +1,7 @@
 use crate::devices::launch_control_xl_mk2::LCXL2Position;
 use crate::MidiInputMessage;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LCXL2InputMessage {
   KeyPressed(LCXL2Position),
   KeyReleased(LCXL2Position),
@@ -32,3 +32,24 @@ impl MidiInputMessage for LCXL2InputMessage {
     }
   }
 }
+
+impl PartialEq for LCXL2InputMessage {
+  fn eq(&self, other: &Self) -> bool {
+    match self {
+      Self::KeyPressed(a) => match other {
+        Self::KeyPressed(b) => a == b,
+        _ => false,
+      },
+      Self::KeyReleased(a) => match other {
+        Self::KeyReleased(b) => a == b,
+        _ => false,
+      },
+      Self::Analog(a, c) => match other {
+        Self::Analog(b, d) => a == b && c == d,
+        _ => false,
+      },
+    }
+  }
+}
+
+impl Eq for LCXL2InputMessage {}

@@ -6,6 +6,7 @@ use crate::song_data::{Set, Song};
 pub enum MessageFromBismuth {
   Hello,
   Goodbye,
+  LoadSong(u64, String),
 }
 
 impl InterMessagePrefixed for MessageFromBismuth {
@@ -22,6 +23,16 @@ impl InterMessageIncoming for MessageFromBismuth {
         "goodbye" => Some(Self::Goodbye),
         _ => None,
       },
+      3 => match raw[0] {
+        "loadSong" => {
+          if let Ok(id) = raw[1].parse::<u64>() {
+            Some(Self::LoadSong(id, raw[2].to_string()))
+          } else {
+            None
+          }
+        }
+        _ => None,
+      },
       _ => None,
     }
   }
@@ -32,6 +43,7 @@ impl InterMessageOutgoing for MessageFromBismuth {
     match self {
       Self::Hello => Ok(String::from("hello")),
       Self::Goodbye => Ok(String::from("goodbye")),
+      Self::LoadSong(id, song) => Ok(format!("loadSong:{}:{}", id, song)),
     }
   }
 }

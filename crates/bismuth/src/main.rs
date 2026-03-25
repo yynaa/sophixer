@@ -13,9 +13,11 @@ use std::{thread::sleep, time::Duration};
 
 use crate::model::BismuthModel;
 use crate::net::{client::Udp3dsClient, Communicator};
+use crate::view::{render, update};
 
 pub mod model;
 pub mod net;
+pub mod view;
 
 fn main() {
   let mut builder = Builder::from_default_env();
@@ -48,6 +50,7 @@ fn main() {
     bottom_console.select();
     println!("an error occurred!");
     println!("{}", e);
+    sleep(Duration::from_secs(5));
   }
 }
 
@@ -73,16 +76,28 @@ fn run() -> Result<()> {
   Communicator::send_message(&client, MessageFromBismuth::Hello)?;
 
   while apt.main_loop() {
+    let mut rerender = false;
+
+    bottom_console.select();
+
     if let Err(e) = client.fetch() {
       error!("ERROR: couldn't fetch client messages: {}", e.to_string());
     }
-    Communicator::update_model(&mut bismuth, &client)?;
+    rerender = rerender || Communicator::update_model(&mut bismuth, &client)?;
 
     hid.scan_input();
     let keys = hid.keys_down();
 
     if keys.contains(KeyPad::START) {
       break;
+    }
+
+    rerender = rerender || update(&keys, &mut bismuth, &client)?;
+
+    if rerender {
+      top_console.select();
+      top_console.clear();
+      render(&bismuth)?;
     }
 
     gfx.wait_for_vblank();

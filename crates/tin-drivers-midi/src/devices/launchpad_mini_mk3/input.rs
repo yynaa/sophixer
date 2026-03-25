@@ -1,7 +1,7 @@
 use crate::devices::launchpad_mini_mk3::LPM3Position;
 use crate::MidiInputMessage;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LPM3InputMessage {
   KeyPressed(LPM3Position),
   KeyReleased(LPM3Position),
@@ -27,3 +27,20 @@ impl MidiInputMessage for LPM3InputMessage {
     }
   }
 }
+
+impl PartialEq for LPM3InputMessage {
+  fn eq(&self, other: &Self) -> bool {
+    match self {
+      Self::KeyPressed(a) => match other {
+        Self::KeyPressed(b) => a == b,
+        _ => false,
+      },
+      Self::KeyReleased(a) => match other {
+        Self::KeyReleased(b) => a == b,
+        _ => false,
+      },
+    }
+  }
+}
+
+impl Eq for LPM3InputMessage {}

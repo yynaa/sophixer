@@ -46,6 +46,28 @@ impl BismuthCommunicator {
             model.bismuth_instance = None;
             info!("bismuth instance from {} disconnected", from);
           }
+          MessageFromBismuth::LoadSong(ri_id, song_id) => {
+            let risa = model
+              .renoise_instance_ids
+              .get_by_left(&ri_id)
+              .ok_or(anyhow::Error::msg("renoise instance socketaddr not found"))?;
+            let ri = model
+              .renoise_instances
+              .get_mut(risa)
+              .ok_or(anyhow::Error::msg("renoise instance not found"))?;
+
+            let song = model
+              .set
+              .songs
+              .get(&song_id)
+              .ok_or(anyhow::Error::msg("song not found"))?;
+            ri.load_song(&song_id, song)?;
+            if model.renoise_instance_focus.is_none() {
+              model.renoise_instance_focus = Some(risa.clone());
+            }
+
+            info!("song {} loaded on instance {}", song_id, ri_id);
+          }
         }
       }
     }
