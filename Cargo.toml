@@ -1,9 +1,13 @@
 [workspace]
 members = [
-    "common/intercom",
-    "tin",
-    "tin/tin-drivers-midi",
-    "bismuth"
+    "crates/intercom",
+    "crates/tin-core",
+    "crates/tin-drivers-midi",
+    # apps
+    "crates/tin",
+    "crates/bismuth",
+    # cli
+    "crates/editor-cli"
 ]
 resolver = "3"
 

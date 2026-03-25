@@ -11,7 +11,7 @@ a suite of programs for various platforms for Sophie Indoll's mixing endeavours
 
 A rust server that sends and receives messages for everyone.
 
-#### 🦴 Calcium 🦴 - A Renoise plugin (Not yet ported from alpha2)
+#### 🦴 Calcium 🦴 - A Renoise plugin
 
 Handles matrix queueing, track control, line callbacks...
 

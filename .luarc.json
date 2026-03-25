@@ -1,0 +1,7 @@
+{
+  "workspace.library": ["/code/o/definitions"],
+  "runtime.plugin": ["/code/o/definitions/plugin.lua"],
+    "diagnostics.disable": [
+        "trailing-space"
+    ]
+}

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RenoiseScriptingTool doc_version="0">
+  <ApiVersion>6</ApiVersion>
+  <Id>xyz.yyna.Calcium</Id>
+  <Version>0.1-0</Version>
+  <Author>yyna [me@yyna.xyz]</Author>
+  <Name>Calcium</Name>
+  <Category>Live Performance</Category>
+  <Description>
+    Renoise plugin for Sophixer
+  </Description>
+  <Platform>Linux</Platform>
+  <Homepage>https://gitlab.com/sophixer/calcium</Homepage>
+</RenoiseScriptingTool>
