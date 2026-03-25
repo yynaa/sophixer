@@ -6,15 +6,17 @@ mod servers;
 mod views;
 
 use crate::model::TinModel;
-use crate::servers::renoise::update_model_from_renoise;
+use crate::servers::bismuth::BismuthCommunicator;
+use crate::servers::renoise::RenoiseCommunicator;
 use crate::views::lpm3_matrix::ViewLPM3Matrix;
 use anyhow::Result;
 use argparse::{ArgumentParser, Store};
-use intercom::Server;
+use intercom::server::udp::UdpServer;
+use intercom::server::InterServer;
+use sophixer_core::song_data::Set;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
-use tin_core::song_data::Set;
 use tin_drivers_midi::devices::launch_control_xl_mk2::driver::LCXL2Driver;
 use tin_drivers_midi::devices::launchpad_mini_mk3::LPM3Driver;
 use tin_drivers_midi::MidiDriver;
@@ -49,7 +51,7 @@ fn main() -> Result<()> {
   let mut lpm3driver = LPM3Driver::connect()?;
   let mut lcxl2driver = LCXL2Driver::connect()?;
 
-  let mut server = Server::start("127.0.0.1:3000")?;
+  let mut server = UdpServer::start("0.0.0.0:3000")?;
 
   let mut view_lpm3_matrix = ViewLPM3Matrix::new();
 
@@ -61,7 +63,8 @@ fn main() -> Result<()> {
     let delta_time = current_time - instant;
 
     server.fetch()?;
-    update_model_from_renoise(&mut tin, &server)?;
+    RenoiseCommunicator::update_model(&mut tin, &server)?;
+    BismuthCommunicator::update_model(&mut tin, &server)?;
 
     view_lpm3_matrix.update(&delta_time, &mut tin, &mut lpm3driver)?;
 

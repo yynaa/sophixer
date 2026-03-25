@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::{arg, value_parser, Command};
-use tin_core::song_data::{Set, Song, SongButton, SongButtonAction, SongSection};
+use sophixer_core::song_data::{Set, Song, SongButton, SongButtonAction, SongSection};
 
 fn cli() -> Command {
   Command::new("sophixer-editor")

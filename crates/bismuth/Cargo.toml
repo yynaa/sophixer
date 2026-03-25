@@ -8,6 +8,11 @@ name = "bismuth"
 workspace = "../.."
 
 [dependencies]
+anyhow = { workspace = true }
+log = { workspace = true }
 ansi-escapes = "0.2.0"
 ansi_term = "0.12.1"
 ctru-rs = { git = "https://github.com/rust3ds/ctru-rs/" }
+intercom = { path = "../intercom" }
+sophixer-core = { path = "../sophixer-core" }
+env_logger = "0.11.10"

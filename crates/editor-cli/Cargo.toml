@@ -10,5 +10,5 @@ workspace = "../.."
 [dependencies]
 anyhow = { workspace = true }
 log = { workspace = true }
-tin-core = { path = "../tin-core" }
+sophixer-core = { path = "../sophixer-core" }
 clap = "4.6.0"

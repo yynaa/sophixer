@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "crates/intercom",
-    "crates/tin-core",
+    "crates/sophixer-core",
     "crates/tin-drivers-midi",
     # apps
     "crates/tin",

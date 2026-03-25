@@ -1,5 +1,5 @@
 [package]
-name = "tin-core"
+name = "sophixer-core"
 repository.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -10,5 +10,6 @@ workspace = "../.."
 [dependencies]
 anyhow = { workspace = true }
 log = { workspace = true }
+intercom = { path = "../intercom" }
 serde = { version = "1.0.228", features = ["derive"] }
 ron = { version = "0.12.0" }

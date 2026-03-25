@@ -5,7 +5,7 @@ use std::fs::read_to_string;
 use std::fs::{self, create_dir_all, File};
 use std::io::Write;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SongButtonAction {
   ToggleChannels {
     channels: HashSet<u64>,
@@ -41,7 +41,7 @@ impl SongButtonAction {
   }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SongButton {
   pub action: SongButtonAction,
 }
@@ -52,7 +52,7 @@ impl SongButton {
   }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct SongSection {
   pub start: u64,
   pub length: u64,
@@ -60,7 +60,7 @@ pub struct SongSection {
   pub buttons: HashMap<i64, SongButton>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Song {
   pub name: String,
   pub authors: String,
@@ -83,7 +83,7 @@ impl Song {
   }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Set {
   pub name: String,
   pub authors: String,

@@ -13,7 +13,8 @@ class "Client"
 
   function Client:send(msg)
   	if self.socket then
-  		local success, error = self.socket:send("renoise:" .. msg)
+      print("sending " .. msg)
+  		local success, error = self.socket:send("calcium:" .. msg .. ";")
   		if not success then
   			warn("couldn't send message to server: " .. error)
   		end
@@ -24,7 +25,7 @@ class "Client"
     if self.socket then
       ---@type string|nil
       ---@diagnostic disable-next-line: assign-type-mismatch
-      local s, socket_error = self.socket:receive("*all", 1)
+      local s, _ = self.socket:receive("*all", 1)
       if (s) then
         local messages = string_split(s, ";")
         for _, msg in ipairs(messages) do
