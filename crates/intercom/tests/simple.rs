@@ -49,7 +49,7 @@ impl InterMessageOutgoing for MessageFromClient {
     match self {
       Self::DoYouWorkProperly => Ok(String::from("doYouWorkProperly")),
       Self::AreYouBroken => Ok(String::from("areYouBroken")),
-      Self::EchoThis(n) => Ok(format!("echoThis:{}", n)),
+      Self::EchoThis(n) => Ok(format!("echoThis,{}", n)),
     }
   }
 }
@@ -89,7 +89,7 @@ impl InterMessageOutgoing for MessageFromServer {
     Ok(match self {
       Self::Yes => String::from("yes"),
       Self::No => String::from("no"),
-      Self::Number(n) => format!("number:{n}"),
+      Self::Number(n) => format!("number,{n}"),
     })
   }
 }

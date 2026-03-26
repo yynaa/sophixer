@@ -43,7 +43,7 @@ impl InterMessageOutgoing for MessageFromBismuth {
     match self {
       Self::Hello => Ok(String::from("hello")),
       Self::Goodbye => Ok(String::from("goodbye")),
-      Self::LoadSong(id, song) => Ok(format!("loadSong:{}:{}", id, song)),
+      Self::LoadSong(id, song) => Ok(format!("loadSong,{},{}", id, song)),
     }
   }
 }
@@ -135,7 +135,7 @@ impl InterMessageOutgoing for MessageToBismuth {
   fn to_raw(self) -> Result<String, intercom::InterError> {
     match self {
       Self::Welcome => Ok(String::from("welcome")),
-      Self::InitSet { name, authors } => Ok(format!("initSet:{}:{}", name, authors)),
+      Self::InitSet { name, authors } => Ok(format!("initSet,{},{}", name, authors)),
       Self::InitSong {
         id,
         name,
@@ -143,11 +143,11 @@ impl InterMessageOutgoing for MessageToBismuth {
         order,
         color,
       } => Ok(format!(
-        "initSong:{}:{}:{}:{}:{}:{}:{}",
+        "initSong,{},{},{},{},{},{},{}",
         id, name, authors, order, color.0, color.1, color.2
       )),
-      Self::RenoiseInstanceAdded(socket) => Ok(format!("renoiseInstanceAdded:{}", socket)),
-      Self::RenoiseInstanceRemoved(socket) => Ok(format!("renoiseInstanceRemoved:{}", socket)),
+      Self::RenoiseInstanceAdded(socket) => Ok(format!("renoiseInstanceAdded,{}", socket)),
+      Self::RenoiseInstanceRemoved(socket) => Ok(format!("renoiseInstanceRemoved,{}", socket)),
     }
   }
 }

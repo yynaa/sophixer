@@ -1,5 +1,11 @@
 require("utils")
+
+require("playback_control")
+
 require("socket")
+
+
+loading_song = false
 
 ---@type Client?
 local client = nil
@@ -31,3 +37,10 @@ renoise.tool():add_menu_entry({
 		renoise.app():show_prompt("Calcium disconnected", "Calcium disconnected", { "OK" })
 	end,
 })
+
+renoise.tool().app_new_document_observable:add_notifier(function(context)
+  if loading_song then --avoids multiple calls
+    print("song loaded")
+    loading_song = false
+  end
+end)

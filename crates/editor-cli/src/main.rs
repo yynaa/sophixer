@@ -57,10 +57,12 @@ fn cli() -> Command {
               Command::new("new")
                 .about("Create new button")
                 .arg(arg!(<BUTTONPOS> "Button pos").value_parser(value_parser!(i64)))
-                .arg(
-                  arg!(<TYPE> "Type of the button")
-                    .value_parser(["toggle_channels", "toggle_track_patterns"]),
-                ),
+                .arg(arg!(<TYPE> "Type of the button").value_parser([
+                  "toggle_channels",
+                  "toggle_track_patterns",
+                  "toggle_effect_bypass",
+                  "cycle_effect_parameter_value",
+                ])),
             ),
         ),
     )
@@ -180,6 +182,18 @@ pub fn main() -> Result<()> {
                     section.buttons.insert(
                       button_pos.clone(),
                       SongButton::new(SongButtonAction::default_toggle_track_patterns()?)?,
+                    );
+                  }
+                  "toggle_effect_bypass" => {
+                    section.buttons.insert(
+                      button_pos.clone(),
+                      SongButton::new(SongButtonAction::default_toggle_effect_bypass()?)?,
+                    );
+                  }
+                  "cycle_effect_parameter_value" => {
+                    section.buttons.insert(
+                      button_pos.clone(),
+                      SongButton::new(SongButtonAction::default_cycle_effect_parameter_value()?)?,
                     );
                   }
                   _ => unreachable!(),

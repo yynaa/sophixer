@@ -103,8 +103,12 @@ pub fn update(keys: &KeyPad, model: &mut BismuthModel, client: &Udp3dsClient) ->
 
 pub fn render(model: &BismuthModel) -> Result<()> {
   if let Some(set) = &model.set {
-    if let Some(current_song) = &model.song_selector {
-      println!("{}", current_song);
+    if let Some(current_song_id) = &model.song_selector {
+      let current_song = set
+        .songs
+        .get(current_song_id)
+        .ok_or(anyhow::Error::msg("couldn't get song from id"))?;
+      println!("{}", current_song.name);
     } else {
       println!("-");
     }

@@ -70,7 +70,7 @@ fn run() -> Result<()> {
   let version = env!("CARGO_PKG_VERSION");
   info!("Bismuth {} started", version);
 
-  info!("starting client... connecting...");
+  info!("starting client... connecting at 10.44.209.146:3000...");
   let mut client = Udp3dsClient::start("10.44.209.146:3000")?;
   info!("client started, waving...");
   Communicator::send_message(&client, MessageFromBismuth::Hello)?;

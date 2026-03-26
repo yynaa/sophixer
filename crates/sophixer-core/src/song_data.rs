@@ -6,18 +6,38 @@ use std::fs::{self, create_dir_all, File};
 use std::io::Write;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CycleEffectParameterValue {
+  pub value: f64,
+  pub color: (u8, u8, u8),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SongButtonAction {
   ToggleChannels {
     channels: HashSet<u64>,
-    instant: bool,
+    default: bool,
     color_off: (u8, u8, u8),
     color_on: (u8, u8, u8),
   },
   ToggleTrackPatterns {
     track_patterns: HashSet<(u64, u64)>,
-    instant: bool,
+    default: bool,
     color_off: (u8, u8, u8),
     color_on: (u8, u8, u8),
+  },
+  ToggleEffectBypass {
+    track: u64,
+    effect: u64,
+    default: bool,
+    color_off: (u8, u8, u8),
+    color_on: (u8, u8, u8),
+  },
+  CycleEffectParameterValue {
+    track: u64,
+    effect: u64,
+    param: u64,
+    default: usize,
+    cycles: Vec<CycleEffectParameterValue>,
   },
 }
 
@@ -25,7 +45,7 @@ impl SongButtonAction {
   pub fn default_toggle_channels() -> Result<SongButtonAction> {
     Ok(SongButtonAction::ToggleChannels {
       channels: HashSet::new(),
-      instant: false,
+      default: true,
       color_off: (127, 0, 0),
       color_on: (0, 0, 127),
     })
@@ -34,9 +54,32 @@ impl SongButtonAction {
   pub fn default_toggle_track_patterns() -> Result<SongButtonAction> {
     Ok(SongButtonAction::ToggleTrackPatterns {
       track_patterns: HashSet::new(),
-      instant: false,
+      default: true,
       color_off: (127, 0, 0),
       color_on: (0, 0, 127),
+    })
+  }
+
+  pub fn default_toggle_effect_bypass() -> Result<SongButtonAction> {
+    Ok(SongButtonAction::ToggleEffectBypass {
+      track: 1,
+      effect: 1,
+      default: true,
+      color_off: (127, 0, 0),
+      color_on: (0, 0, 127),
+    })
+  }
+
+  pub fn default_cycle_effect_parameter_value() -> Result<SongButtonAction> {
+    Ok(SongButtonAction::CycleEffectParameterValue {
+      track: 1,
+      effect: 1,
+      param: 1,
+      default: 0,
+      cycles: Vec::from([CycleEffectParameterValue {
+        value: 0.,
+        color: (127, 0, 0),
+      }]),
     })
   }
 }

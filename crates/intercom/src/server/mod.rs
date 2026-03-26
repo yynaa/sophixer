@@ -24,7 +24,7 @@ pub trait InterServerCommunicator<
       let mut deque_clone = deque.clone();
       let mut r = VecDeque::new();
       while let Some((addr, msg_string)) = deque_clone.pop_front() {
-        match I::from_raw(msg_string.split(":").collect()) {
+        match I::from_raw(msg_string.split(",").collect()) {
           None => {
             warn!("unrecognized message from server: {msg_string:?}")
           }

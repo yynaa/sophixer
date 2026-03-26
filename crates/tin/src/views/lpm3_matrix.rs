@@ -1,8 +1,12 @@
-use std::{collections::VecDeque, time::Duration};
+use std::{collections::VecDeque, net::SocketAddr, time::Duration};
 
-use crate::model::TinModel;
+use crate::{
+  model::{RenoiseInstance, TinModel},
+  servers::renoise::RenoiseCommunicator,
+};
 use anyhow::Result;
-use sophixer_core::song_data::SongButtonAction;
+use intercom::server::{udp::UdpServer, InterServerCommunicator};
+use sophixer_core::{messages::renoise::MessageToRenoise, song_data::SongButtonAction};
 use tin_drivers_midi::{
   devices::launchpad_mini_mk3::{LPM3Driver, LPM3InputMessage, LPM3Position, LPM3Visual},
   MidiDriver,
@@ -19,10 +23,11 @@ impl ViewLPM3Matrix {
 
   pub fn update(
     &mut self,
-    dt: &Duration,
+    _dt: &Duration,
     tin: &mut TinModel,
-    lpm3: &mut LPM3Driver,
+    _lpm3: &mut LPM3Driver,
     lpm3_inputs: VecDeque<LPM3InputMessage>,
+    server: &UdpServer,
   ) -> Result<()> {
     for i in lpm3_inputs {
       if i == LPM3InputMessage::KeyPressed(LPM3Position::Left) {
@@ -36,6 +41,47 @@ impl ViewLPM3Matrix {
       }
       if i == LPM3InputMessage::KeyPressed(LPM3Position::Down) {
         self.camera.1 += 1;
+      }
+
+      if i == LPM3InputMessage::KeyPressed(LPM3Position::Keys) {
+        let mut sorted = if let Some(risa) = &tin.renoise_instance_focus {
+          let ri_id = tin
+            .renoise_instance_ids
+            .get_by_right(risa)
+            .ok_or(anyhow::Error::msg("couldn't find renoise instance id"))?;
+          tin
+            .renoise_instances
+            .iter()
+            .filter(|f| *tin.renoise_instance_ids.get_by_right(f.0).unwrap_or(&0u64) < *ri_id)
+            .collect::<Vec<(&SocketAddr, &RenoiseInstance)>>()
+        } else {
+          tin
+            .renoise_instances
+            .iter()
+            .collect::<Vec<(&SocketAddr, &RenoiseInstance)>>()
+        };
+        sorted.sort_by_key(|f| *tin.renoise_instance_ids.get_by_right(f.0).unwrap_or(&0u64));
+        tin.renoise_instance_focus = sorted.last().map(|f| f.0.clone());
+      }
+      if i == LPM3InputMessage::KeyPressed(LPM3Position::User) {
+        let mut sorted = if let Some(risa) = &tin.renoise_instance_focus {
+          let ri_id = tin
+            .renoise_instance_ids
+            .get_by_right(risa)
+            .ok_or(anyhow::Error::msg("couldn't find renoise instance id"))?;
+          tin
+            .renoise_instances
+            .iter()
+            .filter(|f| *tin.renoise_instance_ids.get_by_right(f.0).unwrap_or(&0u64) > *ri_id)
+            .collect::<Vec<(&SocketAddr, &RenoiseInstance)>>()
+        } else {
+          tin
+            .renoise_instances
+            .iter()
+            .collect::<Vec<(&SocketAddr, &RenoiseInstance)>>()
+        };
+        sorted.sort_by_key(|f| *tin.renoise_instance_ids.get_by_right(f.0).unwrap_or(&0u64));
+        tin.renoise_instance_focus = sorted.first().map(|f| f.0.clone());
       }
 
       if let Some(risa) = &tin.renoise_instance_focus {
@@ -53,41 +99,114 @@ impl ViewLPM3Matrix {
             .ok_or(anyhow::Error::msg("couldn't find song in model"))?;
 
           for (by, section) in &song.sections {
-            for (bx, button) in &section.buttons {
-              let x = *bx - self.camera.0;
-              let y = *by - self.camera.1;
+            let y = *by - self.camera.1;
+            if y >= 1 && y < 9 {
+              if i == LPM3InputMessage::KeyPressed(LPM3Position::Grid(9, y as u8)) {
+                RenoiseCommunicator::send_message(
+                  server,
+                  risa.clone(),
+                  MessageToRenoise::PlaySection(section.start, section.length),
+                )?;
+              }
 
-              if !(x < 1 || x > 8 || y < 1 || y > 8) {
-                if i == LPM3InputMessage::KeyPressed(LPM3Position::Grid(x as u8, y as u8)) {
-                  // matrix button pressed
-                  match button.action {
-                    SongButtonAction::ToggleChannels {
-                      channels: _,
-                      instant: _,
-                      color_off: _,
-                      color_on: _,
-                    } => {
-                      let state =
-                        ri.toggle_button_states
-                          .get(&(*by, *bx))
-                          .ok_or(anyhow::Error::msg(
-                            "couldn't find button in toggle state map",
-                          ))?;
-                      ri.toggle_button_states.insert((*by, *bx), !state);
-                    }
-                    SongButtonAction::ToggleTrackPatterns {
-                      track_patterns: _,
-                      instant: _,
-                      color_off: _,
-                      color_on: _,
-                    } => {
-                      let state =
-                        ri.toggle_button_states
-                          .get(&(*by, *bx))
-                          .ok_or(anyhow::Error::msg(
-                            "couldn't find button in toggle state map",
-                          ))?;
-                      ri.toggle_button_states.insert((*by, *bx), !state);
+              for (bx, button) in &section.buttons {
+                let x = *bx - self.camera.0;
+                if x >= 1 && x < 9 {
+                  if i == LPM3InputMessage::KeyPressed(LPM3Position::Grid(x as u8, y as u8)) {
+                    // matrix button pressed
+                    match &button.action {
+                      SongButtonAction::ToggleChannels {
+                        channels,
+                        default: _,
+                        color_off: _,
+                        color_on: _,
+                      } => {
+                        let state =
+                          *ri
+                            .toggle_button_states
+                            .get(&(*by, *bx))
+                            .ok_or(anyhow::Error::msg(
+                              "couldn't find button in toggle state map",
+                            ))?;
+                        ri.toggle_button_states.insert((*by, *bx), !state);
+                        for c in channels {
+                          RenoiseCommunicator::send_message(
+                            server,
+                            risa.clone(),
+                            MessageToRenoise::MuteTrack(*c, state),
+                          )?;
+                        }
+                      }
+                      SongButtonAction::ToggleTrackPatterns {
+                        track_patterns,
+                        default: _,
+                        color_off: _,
+                        color_on: _,
+                      } => {
+                        let state =
+                          *ri
+                            .toggle_button_states
+                            .get(&(*by, *bx))
+                            .ok_or(anyhow::Error::msg(
+                              "couldn't find button in toggle state map",
+                            ))?;
+                        ri.toggle_button_states.insert((*by, *bx), !state);
+                        for (t, p) in track_patterns {
+                          RenoiseCommunicator::send_message(
+                            server,
+                            risa.clone(),
+                            MessageToRenoise::MuteTrackSequenceSlot(*t, *p, !state),
+                          )?;
+                        }
+                      }
+                      SongButtonAction::ToggleEffectBypass {
+                        track,
+                        effect,
+                        default: _,
+                        color_off: _,
+                        color_on: _,
+                      } => {
+                        let state =
+                          *ri
+                            .toggle_button_states
+                            .get(&(*by, *bx))
+                            .ok_or(anyhow::Error::msg(
+                              "couldn't find button in toggle state map",
+                            ))?;
+                        ri.toggle_button_states.insert((*by, *bx), !state);
+                        RenoiseCommunicator::send_message(
+                          server,
+                          risa.clone(),
+                          MessageToRenoise::BypassEffect(*track, *effect, !state),
+                        )?;
+                      }
+                      SongButtonAction::CycleEffectParameterValue {
+                        track,
+                        effect,
+                        default: _,
+                        param,
+                        cycles,
+                      } => {
+                        let state =
+                          *ri
+                            .cycle_button_states
+                            .get(&(*by, *bx))
+                            .ok_or(anyhow::Error::msg(
+                              "couldn't find button in toggle state map",
+                            ))?;
+                        let next_state = (state + 1) % cycles.len();
+                        ri.cycle_button_states.insert((*by, *bx), next_state);
+                        RenoiseCommunicator::send_message(
+                          server,
+                          risa.clone(),
+                          MessageToRenoise::SetParameterValue(
+                            *track,
+                            *effect,
+                            *param,
+                            cycles[next_state].value,
+                          ),
+                        )?;
+                      }
                     }
                   }
                 }
@@ -102,6 +221,11 @@ impl ViewLPM3Matrix {
   }
 
   pub fn draw(&self, tin: &TinModel, lpm3: &mut LPM3Driver) -> Result<()> {
+    let directions = [LPM3Position::User, LPM3Position::Keys];
+    for d in directions {
+      lpm3.add(LPM3Visual::Static(d, 5))?;
+    }
+
     if let Some(risa) = &tin.renoise_instance_focus {
       let ri = tin.renoise_instances.get(risa).ok_or(anyhow::Error::msg(
         "couldn't find renoise instance in model",
@@ -144,10 +268,10 @@ impl ViewLPM3Matrix {
               let x = *bx - self.camera.0;
 
               if x >= 1 && x < 9 {
-                match button.action {
+                match &button.action {
                   SongButtonAction::ToggleChannels {
                     channels: _,
-                    instant: _,
+                    default: _,
                     color_off,
                     color_on,
                   } => {
@@ -166,7 +290,7 @@ impl ViewLPM3Matrix {
                   }
                   SongButtonAction::ToggleTrackPatterns {
                     track_patterns: _,
-                    instant: _,
+                    default: _,
                     color_off,
                     color_on,
                   } => {
@@ -182,6 +306,49 @@ impl ViewLPM3Matrix {
                       if *state { color_on.1 } else { color_off.1 },
                       if *state { color_on.2 } else { color_off.2 },
                     ))?;
+                  }
+                  SongButtonAction::ToggleEffectBypass {
+                    track: _,
+                    effect: _,
+                    default: _,
+                    color_off,
+                    color_on,
+                  } => {
+                    let state =
+                      ri.toggle_button_states
+                        .get(&(*by, *bx))
+                        .ok_or(anyhow::Error::msg(
+                          "couldn't find button in toggle state map",
+                        ))?;
+                    lpm3.add(LPM3Visual::RGB(
+                      LPM3Position::Grid(x as u8, y as u8),
+                      if *state { color_on.0 } else { color_off.0 },
+                      if *state { color_on.1 } else { color_off.1 },
+                      if *state { color_on.2 } else { color_off.2 },
+                    ))?;
+                  }
+                  SongButtonAction::CycleEffectParameterValue {
+                    track: _,
+                    effect: _,
+                    param: _,
+                    default: _,
+                    cycles,
+                  } => {
+                    let state =
+                      *ri
+                        .cycle_button_states
+                        .get(&(*by, *bx))
+                        .ok_or(anyhow::Error::msg(
+                          "couldn't find button in toggle state map",
+                        ))?;
+                    if let Some(cycle) = cycles.get(state) {
+                      lpm3.add(LPM3Visual::RGB(
+                        LPM3Position::Grid(x as u8, y as u8),
+                        cycle.color.0,
+                        cycle.color.1,
+                        cycle.color.2,
+                      ))?;
+                    }
                   }
                 }
               }

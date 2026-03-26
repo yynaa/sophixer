@@ -1,8 +1,11 @@
 use anyhow::Result;
 use intercom::server::{udp::UdpServer, InterServerCommunicator};
-use sophixer_core::messages::bismuth::{MessageFromBismuth, MessageToBismuth};
+use sophixer_core::messages::{
+  bismuth::{MessageFromBismuth, MessageToBismuth},
+  renoise::MessageToRenoise,
+};
 
-use crate::model::TinModel;
+use crate::{model::TinModel, servers::renoise::RenoiseCommunicator};
 
 pub struct BismuthCommunicator {}
 impl InterServerCommunicator<UdpServer, MessageFromBismuth, MessageToBismuth>
@@ -61,7 +64,12 @@ impl BismuthCommunicator {
               .songs
               .get(&song_id)
               .ok_or(anyhow::Error::msg("song not found"))?;
-            ri.load_song(&song_id, song)?;
+            RenoiseCommunicator::send_message(
+              server,
+              risa.clone(),
+              MessageToRenoise::LoadSong(song.path.clone()),
+            )?;
+            ri.load_song(risa, &server, &song_id, song)?;
             if model.renoise_instance_focus.is_none() {
               model.renoise_instance_focus = Some(risa.clone());
             }

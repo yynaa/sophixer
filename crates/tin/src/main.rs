@@ -8,7 +8,7 @@ mod views;
 use crate::model::TinModel;
 use crate::servers::bismuth::BismuthCommunicator;
 use crate::servers::renoise::RenoiseCommunicator;
-use crate::views::lcxl2_panel::ViewLCXL2Panel;
+// use crate::views::lcxl2_panel::ViewLCXL2Panel;
 use crate::views::lpm3_matrix::ViewLPM3Matrix;
 use anyhow::Result;
 use argparse::{ArgumentParser, Store};
@@ -18,7 +18,7 @@ use sophixer_core::song_data::Set;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
-use tin_drivers_midi::devices::launch_control_xl_mk2::driver::LCXL2Driver;
+// use tin_drivers_midi::devices::launch_control_xl_mk2::driver::LCXL2Driver;
 use tin_drivers_midi::devices::launchpad_mini_mk3::LPM3Driver;
 use tin_drivers_midi::MidiDriver;
 
@@ -50,11 +50,11 @@ fn main() -> Result<()> {
   })?;
 
   let mut lpm3driver = LPM3Driver::connect()?;
-  let mut lcxl2driver = LCXL2Driver::connect()?;
+  // let mut lcxl2driver = LCXL2Driver::connect()?;
 
   let mut server = UdpServer::start("0.0.0.0:3000")?;
 
-  let mut view_lcxl2_panel = ViewLCXL2Panel::new();
+  // let mut view_lcxl2_panel = ViewLCXL2Panel::new();
   let mut view_lpm3_matrix = ViewLPM3Matrix::new();
 
   let mut instant = Instant::now();
@@ -69,30 +69,36 @@ fn main() -> Result<()> {
     BismuthCommunicator::update_model(&mut tin, &server)?;
 
     let lpm3_inputs = lpm3driver.read()?;
-    let lcxl2_inputs = lcxl2driver.read()?;
+    // let lcxl2_inputs = lcxl2driver.read()?;
 
-    view_lcxl2_panel.update(
+    // view_lcxl2_panel.update(
+    //   &delta_time,
+    //   &mut tin,
+    //   &mut lcxl2driver,
+    //   lcxl2_inputs.clone(),
+    // )?;
+    view_lpm3_matrix.update(
       &delta_time,
       &mut tin,
-      &mut lcxl2driver,
-      lcxl2_inputs.clone(),
+      &mut lpm3driver,
+      lpm3_inputs.clone(),
+      &server,
     )?;
-    view_lpm3_matrix.update(&delta_time, &mut tin, &mut lpm3driver, lpm3_inputs.clone())?;
 
     lpm3driver.clear()?;
-    lcxl2driver.clear()?;
+    // lcxl2driver.clear()?;
 
-    view_lcxl2_panel.draw(&tin, &mut lcxl2driver)?;
+    // view_lcxl2_panel.draw(&tin, &mut lcxl2driver)?;
     view_lpm3_matrix.draw(&tin, &mut lpm3driver)?;
 
     lpm3driver.push()?;
-    lcxl2driver.push()?;
+    // lcxl2driver.push()?;
 
     instant = current_time;
   }
 
   lpm3driver.close()?;
-  lcxl2driver.close()?;
+  // lcxl2driver.close()?;
 
   Ok(())
 }
