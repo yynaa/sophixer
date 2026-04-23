@@ -3,6 +3,7 @@ extern crate log;
 
 use ansi_term::{Color, Style};
 use anyhow::Result;
+use ctru::applets::swkbd::{Button, SoftwareKeyboard};
 use ctru::prelude::*;
 use env_logger::Builder;
 use intercom::client::{InterClient, InterClientCommunicator};
@@ -70,8 +71,17 @@ fn run() -> Result<()> {
   let version = env!("CARGO_PKG_VERSION");
   info!("Bismuth {} started", version);
 
-  info!("starting client... connecting at 10.44.209.146:3000...");
-  let mut client = Udp3dsClient::start("10.44.209.146:3000")?;
+  let mut keyboard = SoftwareKeyboard::default();
+  let mut address = String::new();
+  match keyboard.launch(&apt, &gfx) {
+    Ok((text, Button::Right)) => address = text,
+    Ok((_, Button::Left)) => return Ok(()),
+    Ok((_, Button::Middle)) => unreachable!(),
+    Err(e) => return Err(anyhow::Error::new(e)),
+  }
+
+  info!("starting client... connecting at {}:3000...", address);
+  let mut client = Udp3dsClient::start((address + ":3000").as_str())?;
   info!("client started, waving...");
   Communicator::send_message(&client, MessageFromBismuth::Hello)?;
 

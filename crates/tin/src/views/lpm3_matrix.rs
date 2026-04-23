@@ -91,6 +91,9 @@ impl ViewLPM3Matrix {
           .ok_or(anyhow::Error::msg(
             "couldn't find renoise instance in model",
           ))?;
+        if i == LPM3InputMessage::KeyPressed(LPM3Position::Session) {
+          RenoiseCommunicator::send_message(server, risa.clone(), MessageToRenoise::StopTransport)?;
+        }
         if let Some(song_id) = &ri.loaded_song {
           let song = tin
             .set
@@ -223,13 +226,14 @@ impl ViewLPM3Matrix {
   pub fn draw(&self, tin: &TinModel, lpm3: &mut LPM3Driver) -> Result<()> {
     let directions = [LPM3Position::User, LPM3Position::Keys];
     for d in directions {
-      lpm3.add(LPM3Visual::Static(d, 5))?;
+      lpm3.add(LPM3Visual::Static(d, 13))?;
     }
 
     if let Some(risa) = &tin.renoise_instance_focus {
       let ri = tin.renoise_instances.get(risa).ok_or(anyhow::Error::msg(
         "couldn't find renoise instance in model",
       ))?;
+      lpm3.add(LPM3Visual::Static(LPM3Position::Session, 5))?;
       if let Some(song_id) = &ri.loaded_song {
         // STATUS
         lpm3.add(LPM3Visual::Static(LPM3Position::Logo, 37))?;

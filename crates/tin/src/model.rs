@@ -49,7 +49,7 @@ impl RenoiseInstance {
               RenoiseCommunicator::send_message(
                 server,
                 addr.clone(),
-                MessageToRenoise::MuteTrack(*c, *default),
+                MessageToRenoise::MuteTrack(*c, !*default),
               )?;
             }
           }

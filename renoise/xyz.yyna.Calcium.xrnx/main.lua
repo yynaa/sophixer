@@ -4,7 +4,6 @@ require("playback_control")
 
 require("socket")
 
-
 loading_song = false
 
 ---@type Client?
@@ -38,7 +37,7 @@ renoise.tool():add_menu_entry({
 	end,
 })
 
-renoise.tool().app_new_document_observable:add_notifier(function(context)
+renoise.tool().app_new_document_observable:add_notifier(function()
   if loading_song then --avoids multiple calls
     print("song loaded")
     loading_song = false
