@@ -1,5 +1,5 @@
 [package]
-name = "sophixer-core"
+name = "editor"
 repository.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -10,6 +10,7 @@ workspace = "../.."
 [dependencies]
 anyhow = { workspace = true }
 log = { workspace = true }
-intercom = { path = "../intercom" }
-serde = { version = "1.0.228", features = ["derive"] }
-ron = { version = "0.12.1" }
+sophixer-core = { path = "../sophixer-core" }
+ratatui = "0.30.0"
+crossterm = "0.29.0"
+clap = { version = "4.6.0", features = ["derive"] }
