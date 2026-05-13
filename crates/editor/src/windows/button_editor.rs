@@ -1,0 +1,315 @@
+use eframe::egui::{color_picker::color_edit_button_srgb, ComboBox, DragValue};
+use sophixer_core::song_data::{CycleEffectParameterValue, SongButton, SongButtonAction};
+
+use crate::windows::Window;
+
+pub struct ButtonEditor {
+  song_id: String,
+  section_id: i64,
+  button_id: i64,
+
+  selected_type: ActionType,
+  u64_buffer_a: u64,
+  u64_buffer_b: u64,
+}
+
+impl ButtonEditor {
+  pub fn new(song_id: String, section_id: i64, button_id: i64, button: &SongButton) -> Self {
+    Self {
+      song_id,
+      section_id,
+      button_id,
+
+      selected_type: ActionType::from_action(&button.action),
+      u64_buffer_a: 0,
+      u64_buffer_b: 0,
+    }
+  }
+}
+
+impl Window for ButtonEditor {
+  fn title(&mut self) -> String {
+    format!(
+      "button editor: {}@{}:{}",
+      self.song_id, self.section_id, self.button_id,
+    )
+  }
+
+  fn ui(
+    &mut self,
+    model: &mut crate::Model,
+    ui: &mut eframe::egui::Ui,
+  ) -> anyhow::Result<Option<Box<dyn Window>>> {
+    if let Some(set) = &mut model.set {
+      if let Some(song) = set.songs.get_mut(&self.song_id) {
+        if let Some(section) = song.sections.get_mut(&self.section_id) {
+          ui.heading("manage");
+
+          if ui.button("delete").clicked() {
+            section.buttons.remove(&self.button_id);
+          }
+
+          if let Some(button) = section.buttons.get_mut(&self.button_id) {
+            let before = self.selected_type;
+            ComboBox::from_label("action type")
+              .selected_text(format!("{:?}", self.selected_type))
+              .show_ui(ui, |ui| {
+                ui.selectable_value(
+                  &mut self.selected_type,
+                  ActionType::ToggleChannels,
+                  "ToggleChannels",
+                );
+                ui.selectable_value(
+                  &mut self.selected_type,
+                  ActionType::ToggleTrackPatterns,
+                  "ToggleTrackPatterns",
+                );
+                ui.selectable_value(
+                  &mut self.selected_type,
+                  ActionType::ToggleEffectBypass,
+                  "ToggleEffectBypass",
+                );
+                ui.selectable_value(
+                  &mut self.selected_type,
+                  ActionType::CycleEffectParameterValue,
+                  "CycleEffectParameterValue",
+                );
+              });
+
+            if before != self.selected_type {
+              button.action = self.selected_type.to_action();
+            }
+
+            match &mut button.action {
+              SongButtonAction::ToggleTrackPatterns {
+                track_patterns,
+                default,
+                color_off,
+                color_on,
+              } => {
+                // TRACK PATTERNS
+
+                ui.heading("info");
+
+                ui.checkbox(default, "default");
+
+                ui.horizontal(|ui| {
+                  ui.label("color off");
+                  color_edit_button_srgb(ui, color_off);
+                });
+
+                ui.horizontal(|ui| {
+                  ui.label("color on");
+                  color_edit_button_srgb(ui, color_on);
+                });
+
+                ui.heading("track patterns");
+
+                let tpclone = track_patterns.clone();
+                let mut tps = tpclone.iter().collect::<Vec<&(u64, u64)>>();
+                tps.sort();
+                for tp in tps {
+                  ui.horizontal(|ui| {
+                    ui.label(format!("track {} pos {}", tp.0, tp.1));
+                    if ui.button("remove").clicked() {
+                      track_patterns.remove(tp);
+                    }
+                  });
+                }
+                ui.horizontal(|ui| {
+                  ui.label("track");
+                  ui.add(DragValue::new(&mut self.u64_buffer_a));
+                  ui.label("pos");
+                  ui.add(DragValue::new(&mut self.u64_buffer_b));
+                  if ui.button("add").clicked() {
+                    track_patterns.insert((self.u64_buffer_a, self.u64_buffer_b));
+                  }
+                });
+              }
+              SongButtonAction::ToggleChannels {
+                channels,
+                default,
+                color_off,
+                color_on,
+              } => {
+                // CHANNELS
+
+                ui.heading("info");
+
+                ui.checkbox(default, "default");
+
+                ui.horizontal(|ui| {
+                  ui.label("color off");
+                  color_edit_button_srgb(ui, color_off);
+                });
+
+                ui.horizontal(|ui| {
+                  ui.label("color on");
+                  color_edit_button_srgb(ui, color_on);
+                });
+
+                ui.heading("track patterns");
+
+                let tpclone = channels.clone();
+                let mut tps = tpclone.iter().collect::<Vec<&u64>>();
+                tps.sort();
+                for tp in tps {
+                  ui.horizontal(|ui| {
+                    ui.label(format!("track {}", tp));
+                    if ui.button("remove").clicked() {
+                      channels.remove(tp);
+                    }
+                  });
+                }
+                ui.horizontal(|ui| {
+                  ui.label("track");
+                  ui.add(DragValue::new(&mut self.u64_buffer_a));
+                  if ui.button("add").clicked() {
+                    channels.insert(self.u64_buffer_a);
+                  }
+                });
+              }
+              SongButtonAction::ToggleEffectBypass {
+                track,
+                effect,
+                default,
+                color_off,
+                color_on,
+              } => {
+                // EFFECT
+
+                ui.heading("info");
+
+                ui.horizontal(|ui| {
+                  ui.label("track");
+                  ui.add(DragValue::new(track));
+                });
+
+                ui.horizontal(|ui| {
+                  ui.label("effect");
+                  ui.add(DragValue::new(effect));
+                });
+
+                ui.checkbox(default, "default");
+
+                ui.horizontal(|ui| {
+                  ui.label("color off");
+                  color_edit_button_srgb(ui, color_off);
+                });
+
+                ui.horizontal(|ui| {
+                  ui.label("color on");
+                  color_edit_button_srgb(ui, color_on);
+                });
+              }
+              SongButtonAction::CycleEffectParameterValue {
+                track,
+                effect,
+                param,
+                default,
+                cycles,
+              } => {
+                // CYCLES
+
+                ui.heading("info");
+
+                ui.horizontal(|ui| {
+                  ui.label("track");
+                  ui.add(DragValue::new(track));
+                });
+
+                ui.horizontal(|ui| {
+                  ui.label("effect");
+                  ui.add(DragValue::new(effect));
+                });
+
+                ui.horizontal(|ui| {
+                  ui.label("param");
+                  ui.add(DragValue::new(param));
+                });
+
+                ui.horizontal(|ui| {
+                  ui.label("default");
+                  ui.add(DragValue::new(default).range(0..=(cycles.len() - 1)));
+                });
+
+                ui.heading("cycles");
+
+                for c in cycles.iter_mut() {
+                  ui.horizontal(|ui| {
+                    ui.label("value");
+                    ui.add(DragValue::new(&mut c.value).speed(0.05));
+                    ui.label("color");
+                    color_edit_button_srgb(ui, &mut c.color);
+                  });
+                }
+                ui.horizontal(|ui| {
+                  if ui.button("-").clicked() && cycles.len() > 0 {
+                    cycles.pop();
+                  }
+                  if ui.button("+").clicked() {
+                    cycles.push(CycleEffectParameterValue::default());
+                  }
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    Ok(None)
+  }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+enum ActionType {
+  ToggleChannels,
+  ToggleTrackPatterns,
+  ToggleEffectBypass,
+  CycleEffectParameterValue,
+}
+
+impl ActionType {
+  fn from_action(action: &SongButtonAction) -> Self {
+    match action {
+      SongButtonAction::CycleEffectParameterValue {
+        track: _,
+        effect: _,
+        param: _,
+        default: _,
+        cycles: _,
+      } => Self::CycleEffectParameterValue,
+      SongButtonAction::ToggleChannels {
+        channels: _,
+        default: _,
+        color_off: _,
+        color_on: _,
+      } => Self::ToggleChannels,
+      SongButtonAction::ToggleEffectBypass {
+        track: _,
+        effect: _,
+        color_off: _,
+        color_on: _,
+        default: _,
+      } => Self::ToggleEffectBypass,
+      SongButtonAction::ToggleTrackPatterns {
+        track_patterns: _,
+        default: _,
+        color_off: _,
+        color_on: _,
+      } => Self::ToggleTrackPatterns,
+    }
+  }
+
+  fn to_action(self) -> SongButtonAction {
+    match self {
+      Self::ToggleChannels => SongButtonAction::default_toggle_channels().unwrap(),
+      Self::ToggleTrackPatterns => SongButtonAction::default_toggle_track_patterns().unwrap(),
+      Self::ToggleEffectBypass => SongButtonAction::default_toggle_effect_bypass().unwrap(),
+      Self::CycleEffectParameterValue => {
+        SongButtonAction::default_cycle_effect_parameter_value().unwrap()
+      }
+    }
+  }
+}

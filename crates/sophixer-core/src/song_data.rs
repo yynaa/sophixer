@@ -8,7 +8,16 @@ use std::io::Write;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CycleEffectParameterValue {
   pub value: f64,
-  pub color: (u8, u8, u8),
+  pub color: [u8; 3],
+}
+
+impl Default for CycleEffectParameterValue {
+  fn default() -> Self {
+    Self {
+      value: 0.5,
+      color: [255, 255, 255],
+    }
+  }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -16,21 +25,21 @@ pub enum SongButtonAction {
   ToggleChannels {
     channels: HashSet<u64>,
     default: bool,
-    color_off: (u8, u8, u8),
-    color_on: (u8, u8, u8),
+    color_off: [u8; 3],
+    color_on: [u8; 3],
   },
   ToggleTrackPatterns {
     track_patterns: HashSet<(u64, u64)>,
     default: bool,
-    color_off: (u8, u8, u8),
-    color_on: (u8, u8, u8),
+    color_off: [u8; 3],
+    color_on: [u8; 3],
   },
   ToggleEffectBypass {
     track: u64,
     effect: u64,
     default: bool,
-    color_off: (u8, u8, u8),
-    color_on: (u8, u8, u8),
+    color_off: [u8; 3],
+    color_on: [u8; 3],
   },
   CycleEffectParameterValue {
     track: u64,
@@ -46,8 +55,8 @@ impl SongButtonAction {
     Ok(SongButtonAction::ToggleChannels {
       channels: HashSet::new(),
       default: true,
-      color_off: (127, 0, 0),
-      color_on: (0, 0, 127),
+      color_off: [255, 0, 0],
+      color_on: [0, 0, 255],
     })
   }
 
@@ -55,8 +64,8 @@ impl SongButtonAction {
     Ok(SongButtonAction::ToggleTrackPatterns {
       track_patterns: HashSet::new(),
       default: true,
-      color_off: (127, 0, 0),
-      color_on: (0, 0, 127),
+      color_off: [255, 0, 0],
+      color_on: [0, 0, 255],
     })
   }
 
@@ -65,8 +74,8 @@ impl SongButtonAction {
       track: 1,
       effect: 1,
       default: true,
-      color_off: (127, 0, 0),
-      color_on: (0, 0, 127),
+      color_off: [255, 0, 0],
+      color_on: [0, 0, 255],
     })
   }
 
@@ -78,7 +87,7 @@ impl SongButtonAction {
       default: 0,
       cycles: Vec::from([CycleEffectParameterValue {
         value: 0.,
-        color: (127, 0, 0),
+        color: [0, 255, 0],
       }]),
     })
   }
@@ -99,7 +108,7 @@ impl SongButton {
 pub struct SongSection {
   pub start: u64,
   pub length: u64,
-  pub color: (u8, u8, u8),
+  pub color: [u8; 3],
   pub buttons: HashMap<i64, SongButton>,
 }
 
@@ -109,7 +118,7 @@ pub struct Song {
   pub authors: String,
   pub path: String,
   pub order: i64,
-  pub color: (u8, u8, u8),
+  pub color: [u8; 3],
   pub bpm: f64,
   pub sections: HashMap<i64, SongSection>,
 }
@@ -121,7 +130,7 @@ impl Song {
       authors,
       path,
       order: 0,
-      color: (127, 127, 127),
+      color: [255, 255, 255],
       bpm: 125.,
       sections: HashMap::new(),
     })

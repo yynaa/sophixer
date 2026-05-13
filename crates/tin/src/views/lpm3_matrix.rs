@@ -220,7 +220,12 @@ impl ViewLPM3Matrix {
           LPM3Position::Right,
         ];
         for d in directions {
-          lpm3.add(LPM3Visual::RGB(d, song.color.0, song.color.1, song.color.2))?;
+          lpm3.add(LPM3Visual::RGB(
+            d,
+            song.color[0],
+            song.color[1],
+            song.color[2],
+          ))?;
         }
 
         // sections
@@ -230,9 +235,9 @@ impl ViewLPM3Matrix {
             // section player
             lpm3.add(LPM3Visual::RGB(
               LPM3Position::Grid(9, y as u8),
-              section.color.0,
-              section.color.1,
-              section.color.2,
+              section.color[0],
+              section.color[1],
+              section.color[2],
             ))?;
 
             // buttons
@@ -255,9 +260,9 @@ impl ViewLPM3Matrix {
                         ))?;
                     lpm3.add(LPM3Visual::RGB(
                       LPM3Position::Grid(x as u8, y as u8),
-                      if *state { color_on.0 } else { color_off.0 },
-                      if *state { color_on.1 } else { color_off.1 },
-                      if *state { color_on.2 } else { color_off.2 },
+                      if *state { color_on[0] } else { color_off[0] },
+                      if *state { color_on[1] } else { color_off[1] },
+                      if *state { color_on[2] } else { color_off[2] },
                     ))?;
                   }
                   SongButtonAction::ToggleTrackPatterns {
@@ -274,9 +279,9 @@ impl ViewLPM3Matrix {
                         ))?;
                     lpm3.add(LPM3Visual::RGB(
                       LPM3Position::Grid(x as u8, y as u8),
-                      if *state { color_on.0 } else { color_off.0 },
-                      if *state { color_on.1 } else { color_off.1 },
-                      if *state { color_on.2 } else { color_off.2 },
+                      if *state { color_on[0] } else { color_off[0] },
+                      if *state { color_on[1] } else { color_off[1] },
+                      if *state { color_on[2] } else { color_off[2] },
                     ))?;
                   }
                   SongButtonAction::ToggleEffectBypass {
@@ -294,9 +299,9 @@ impl ViewLPM3Matrix {
                         ))?;
                     lpm3.add(LPM3Visual::RGB(
                       LPM3Position::Grid(x as u8, y as u8),
-                      if *state { color_on.0 } else { color_off.0 },
-                      if *state { color_on.1 } else { color_off.1 },
-                      if *state { color_on.2 } else { color_off.2 },
+                      if *state { color_on[0] } else { color_off[0] },
+                      if *state { color_on[1] } else { color_off[1] },
+                      if *state { color_on[2] } else { color_off[2] },
                     ))?;
                   }
                   SongButtonAction::CycleEffectParameterValue {
@@ -316,9 +321,9 @@ impl ViewLPM3Matrix {
                     if let Some(cycle) = cycles.get(state) {
                       lpm3.add(LPM3Visual::RGB(
                         LPM3Position::Grid(x as u8, y as u8),
-                        cycle.color.0,
-                        cycle.color.1,
-                        cycle.color.2,
+                        cycle.color[0],
+                        cycle.color[1],
+                        cycle.color[2],
                       ))?;
                     }
                   }

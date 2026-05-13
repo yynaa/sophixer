@@ -59,7 +59,7 @@ pub enum MessageToBismuth {
     name: String,
     authors: String,
     order: i64,
-    color: (u8, u8, u8),
+    color: [u8; 3],
   },
   RenoiseInstanceAdded(u64),
   RenoiseInstanceRemoved(u64),
@@ -118,7 +118,7 @@ impl InterMessageIncoming for MessageToBismuth {
               name: raw[2].to_string(),
               authors: raw[3].to_string(),
               order,
-              color: (color_red, color_green, color_blue),
+              color: [color_red, color_green, color_blue],
             })
           } else {
             None
@@ -144,7 +144,7 @@ impl InterMessageOutgoing for MessageToBismuth {
         color,
       } => Ok(format!(
         "initSong,{},{},{},{},{},{},{}",
-        id, name, authors, order, color.0, color.1, color.2
+        id, name, authors, order, color[0], color[1], color[2]
       )),
       Self::RenoiseInstanceAdded(socket) => Ok(format!("renoiseInstanceAdded,{}", socket)),
       Self::RenoiseInstanceRemoved(socket) => Ok(format!("renoiseInstanceRemoved,{}", socket)),

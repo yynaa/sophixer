@@ -25,7 +25,13 @@ impl MidiOutputMessage for LPM3OutputMessage {
             LPM3Visual::Pulsing(pos, color) => {
               result.append(&mut vec![2, pos.to_raw()?, color]);
             }
-            LPM3Visual::RGB(pos, r, g, b) => result.append(&mut vec![3, pos.to_raw()?, r, g, b]),
+            LPM3Visual::RGB(pos, r, g, b) => result.append(&mut vec![
+              3,
+              pos.to_raw()?,
+              r.div_euclid(2),
+              g.div_euclid(2),
+              b.div_euclid(2),
+            ]),
           }
         }
         result.push(247);

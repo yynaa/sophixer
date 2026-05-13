@@ -7,7 +7,9 @@ members = [
     "crates/tin",
     "crates/bismuth",
     # cli
-    "crates/editor-cli"
+    "crates/editor-cli",
+    # editor,
+    "crates/editor"
 ]
 resolver = "3"
 
