@@ -37,10 +37,7 @@ pub struct Model {
 
 impl Default for Model {
   fn default() -> Self {
-    Self {
-      // set: None
-      set: Some(Set::from_folder("/code/p/sophixer/sets/10".to_string()).unwrap()),
-    }
+    Self { set: None }
   }
 }
 
@@ -48,8 +45,7 @@ impl Default for App {
   fn default() -> Self {
     Self {
       model: Model::default(),
-      // set_folder: None,
-      set_folder: Some("/code/p/sophixer/sets/10".to_string()),
+      set_folder: None,
       windows: Vec::new(),
     }
   }
