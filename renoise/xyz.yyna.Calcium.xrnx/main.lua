@@ -21,6 +21,7 @@ renoise.tool():add_menu_entry({
 	  client = Client()
 		renoise.tool():add_timer(client_timer_function, 10)
 		-- renoise.app():show_prompt("Calcium connected", "Calcium connected", { "OK" })
+		-- renoise.song().transport.sync_mode = renoise.Transport.SYNC_MODE_MIDI_CLOCK
 	end,
 })
 
@@ -33,7 +34,8 @@ renoise.tool():add_menu_entry({
 		end
 	  client = nil
 		renoise.tool():remove_timer(client_timer_function)
-		renoise.app():show_prompt("Calcium disconnected", "Calcium disconnected", { "OK" })
+		-- renoise.app():show_prompt("Calcium disconnected", "Calcium disconnected", { "OK" })
+		-- renoise.song().transport.sync_mode = renoise.Transport.SYNC_MODE_INTERNAL
 	end,
 })
 

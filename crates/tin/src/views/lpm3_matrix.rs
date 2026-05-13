@@ -1,9 +1,6 @@
-use std::{collections::VecDeque, net::SocketAddr, time::Duration};
+use std::{collections::VecDeque, time::Duration};
 
-use crate::{
-  model::{RenoiseInstance, TinModel},
-  servers::renoise::RenoiseCommunicator,
-};
+use crate::{model::TinModel, servers::renoise::RenoiseCommunicator};
 use anyhow::Result;
 use intercom::server::{udp::UdpServer, InterServerCommunicator};
 use sophixer_core::{messages::renoise::MessageToRenoise, song_data::SongButtonAction};
@@ -29,6 +26,7 @@ impl ViewLPM3Matrix {
     lpm3_inputs: VecDeque<LPM3InputMessage>,
     server: &UdpServer,
   ) -> Result<()> {
+    let static_set = tin.set.clone();
     for i in lpm3_inputs {
       if i == LPM3InputMessage::KeyPressed(LPM3Position::Left) {
         self.camera.0 -= 1;
@@ -43,73 +41,26 @@ impl ViewLPM3Matrix {
         self.camera.1 += 1;
       }
 
-      if i == LPM3InputMessage::KeyPressed(LPM3Position::Keys) {
-        let mut sorted = if let Some(risa) = &tin.renoise_instance_focus {
-          let ri_id = tin
-            .renoise_instance_ids
-            .get_by_right(risa)
-            .ok_or(anyhow::Error::msg("couldn't find renoise instance id"))?;
-          tin
-            .renoise_instances
-            .iter()
-            .filter(|f| *tin.renoise_instance_ids.get_by_right(f.0).unwrap_or(&0u64) < *ri_id)
-            .collect::<Vec<(&SocketAddr, &RenoiseInstance)>>()
-        } else {
-          tin
-            .renoise_instances
-            .iter()
-            .collect::<Vec<(&SocketAddr, &RenoiseInstance)>>()
-        };
-        sorted.sort_by_key(|f| *tin.renoise_instance_ids.get_by_right(f.0).unwrap_or(&0u64));
-        tin.renoise_instance_focus = sorted.last().map(|f| f.0.clone());
-      }
-      if i == LPM3InputMessage::KeyPressed(LPM3Position::User) {
-        let mut sorted = if let Some(risa) = &tin.renoise_instance_focus {
-          let ri_id = tin
-            .renoise_instance_ids
-            .get_by_right(risa)
-            .ok_or(anyhow::Error::msg("couldn't find renoise instance id"))?;
-          tin
-            .renoise_instances
-            .iter()
-            .filter(|f| *tin.renoise_instance_ids.get_by_right(f.0).unwrap_or(&0u64) > *ri_id)
-            .collect::<Vec<(&SocketAddr, &RenoiseInstance)>>()
-        } else {
-          tin
-            .renoise_instances
-            .iter()
-            .collect::<Vec<(&SocketAddr, &RenoiseInstance)>>()
-        };
-        sorted.sort_by_key(|f| *tin.renoise_instance_ids.get_by_right(f.0).unwrap_or(&0u64));
-        tin.renoise_instance_focus = sorted.first().map(|f| f.0.clone());
-      }
-
-      if let Some(risa) = &tin.renoise_instance_focus {
-        let ri = tin
-          .renoise_instances
-          .get_mut(risa)
-          .ok_or(anyhow::Error::msg(
-            "couldn't find renoise instance in model",
-          ))?;
+      if let Some((risa, ri)) =
+        tin.unpack_mut_renoise_instance_option(tin.renoise_instance_focus.clone())?
+      {
         if i == LPM3InputMessage::KeyPressed(LPM3Position::Session) {
           RenoiseCommunicator::send_message(server, risa.clone(), MessageToRenoise::StopTransport)?;
         }
-        if let Some(song_id) = &ri.loaded_song {
-          let song = tin
-            .set
-            .songs
-            .get(song_id)
-            .ok_or(anyhow::Error::msg("couldn't find song in model"))?;
-
+        if let Some(song) = static_set.get_song_option(ri.loaded_song.clone())? {
           for (by, section) in &song.sections {
             let y = *by - self.camera.1;
             if y >= 1 && y < 9 {
               if i == LPM3InputMessage::KeyPressed(LPM3Position::Grid(9, y as u8)) {
-                RenoiseCommunicator::send_message(
-                  server,
-                  risa.clone(),
-                  MessageToRenoise::PlaySection(section.start, section.length),
-                )?;
+                // ri.send_start_next_beat = Some(*by);
+                let msg = MessageToRenoise::PlaySection(section.start, section.length);
+                RenoiseCommunicator::send_message(server, risa, msg)?;
+                trace!(
+                  "playing section start {} length {} on instance {}",
+                  section.start,
+                  section.length,
+                  risa
+                );
               }
 
               for (bx, button) in &section.buttons {
@@ -139,6 +90,12 @@ impl ViewLPM3Matrix {
                             MessageToRenoise::MuteTrack(*c, state),
                           )?;
                         }
+                        trace!(
+                          "toggled {} channels {:?} on instance {}",
+                          !state,
+                          channels,
+                          risa
+                        );
                       }
                       SongButtonAction::ToggleTrackPatterns {
                         track_patterns,
@@ -161,6 +118,12 @@ impl ViewLPM3Matrix {
                             MessageToRenoise::MuteTrackSequenceSlot(*t, *p, !state),
                           )?;
                         }
+                        trace!(
+                          "toggled {} track patterns {:?} on instance {}",
+                          !state,
+                          track_patterns,
+                          risa
+                        );
                       }
                       SongButtonAction::ToggleEffectBypass {
                         track,
@@ -182,6 +145,13 @@ impl ViewLPM3Matrix {
                           risa.clone(),
                           MessageToRenoise::BypassEffect(*track, *effect, !state),
                         )?;
+                        trace!(
+                          "toggled {} effect {} bypass on track {} on instance {}",
+                          !state,
+                          effect,
+                          track,
+                          risa
+                        );
                       }
                       SongButtonAction::CycleEffectParameterValue {
                         track,
@@ -209,6 +179,13 @@ impl ViewLPM3Matrix {
                             cycles[next_state].value,
                           ),
                         )?;
+                        trace!(
+                          "cycled {} on effect {} on track {} on instance {}",
+                          cycles[next_state].value,
+                          effect,
+                          track,
+                          risa
+                        );
                       }
                     }
                   }
@@ -224,25 +201,16 @@ impl ViewLPM3Matrix {
   }
 
   pub fn draw(&self, tin: &TinModel, lpm3: &mut LPM3Driver) -> Result<()> {
-    let directions = [LPM3Position::User, LPM3Position::Keys];
-    for d in directions {
-      lpm3.add(LPM3Visual::Static(d, 13))?;
-    }
+    // let directions = [LPM3Position::User, LPM3Position::Keys];
+    // for d in directions {
+    //   lpm3.add(LPM3Visual::Static(d, 13))?;
+    // }
 
-    if let Some(risa) = &tin.renoise_instance_focus {
-      let ri = tin.renoise_instances.get(risa).ok_or(anyhow::Error::msg(
-        "couldn't find renoise instance in model",
-      ))?;
+    if let Some(ri) = tin.get_renoise_instance_option(tin.renoise_instance_focus.clone())? {
       lpm3.add(LPM3Visual::Static(LPM3Position::Session, 5))?;
-      if let Some(song_id) = &ri.loaded_song {
+      if let Some(song) = tin.set.get_song_option(ri.loaded_song.clone())? {
         // STATUS
         lpm3.add(LPM3Visual::Static(LPM3Position::Logo, 37))?;
-
-        let song = tin
-          .set
-          .songs
-          .get(song_id)
-          .ok_or(anyhow::Error::msg("couldn't find song in model"))?;
 
         // CONTROL PANEL
         let directions = [

@@ -35,6 +35,11 @@ class "Client"
         print("load song: " .. sub[2])
         renoise.app():load_song(sub[2])
         loading_song = true
+      elseif sub[1] == "setBPM" then
+        local bpm = tonumber(sub[2])
+        if bpm ~= nil then
+          renoise.song().transport.bpm = bpm
+        end
       end
     elseif #sub == 3 then
       if sub[1] == "playSection" then

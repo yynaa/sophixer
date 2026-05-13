@@ -110,6 +110,7 @@ pub struct Song {
   pub path: String,
   pub order: i64,
   pub color: (u8, u8, u8),
+  pub bpm: f64,
   pub sections: HashMap<i64, SongSection>,
 }
 
@@ -121,6 +122,7 @@ impl Song {
       path,
       order: 0,
       color: (127, 127, 127),
+      bpm: 125.,
       sections: HashMap::new(),
     })
   }
@@ -177,5 +179,17 @@ impl Set {
     }
 
     Ok(())
+  }
+
+  pub fn get_song_option(&self, song_id: Option<String>) -> Result<Option<&Song>> {
+    if let Some(song_id) = song_id {
+      let s = self
+        .songs
+        .get(&song_id)
+        .ok_or(anyhow::Error::msg("couldn't find song id in songs"))?;
+      Ok(Some(s))
+    } else {
+      Ok(None)
+    }
   }
 }

@@ -112,6 +112,10 @@ pub struct TinModel {
   pub renoise_instances: HashMap<SocketAddr, RenoiseInstance>,
   pub renoise_instance_ids: BiMap<u64, SocketAddr>,
   pub renoise_instance_focus: Option<SocketAddr>,
+  /// represents the instance A (usually left) used for beatsyncing
+  pub renoise_instance_a: Option<SocketAddr>,
+  /// represents the instance B (usually right) used for beatsyncing
+  pub renoise_instance_b: Option<SocketAddr>,
 }
 
 impl TinModel {
@@ -122,6 +126,63 @@ impl TinModel {
       renoise_instances: HashMap::new(),
       renoise_instance_ids: BiMap::new(),
       renoise_instance_focus: None,
+      renoise_instance_a: None,
+      renoise_instance_b: None,
+    }
+  }
+
+  pub fn get_mut_renoise_instance(&mut self, addr: SocketAddr) -> Result<&mut RenoiseInstance> {
+    let ri = self
+      .renoise_instances
+      .get_mut(&addr)
+      .ok_or(anyhow::Error::msg(
+        "couldn't find renoise instance in model",
+      ))?;
+    Ok(ri)
+  }
+
+  pub fn get_renoise_instance_option(
+    &self,
+    addr_opt: Option<SocketAddr>,
+  ) -> Result<Option<&RenoiseInstance>> {
+    if let Some(addr) = addr_opt {
+      let ri = self.renoise_instances.get(&addr).ok_or(anyhow::Error::msg(
+        "couldn't find renoise instance in model",
+      ))?;
+      Ok(Some(ri))
+    } else {
+      Ok(None)
+    }
+  }
+
+  pub fn unpack_renoise_instance_option(
+    &self,
+    addr_opt: Option<SocketAddr>,
+  ) -> Result<Option<(SocketAddr, &RenoiseInstance)>> {
+    if let Some(addr) = addr_opt {
+      let ri = self.renoise_instances.get(&addr).ok_or(anyhow::Error::msg(
+        "couldn't find renoise instance in model",
+      ))?;
+      Ok(Some((addr.clone(), ri)))
+    } else {
+      Ok(None)
+    }
+  }
+
+  pub fn unpack_mut_renoise_instance_option(
+    &mut self,
+    addr_opt: Option<SocketAddr>,
+  ) -> Result<Option<(SocketAddr, &mut RenoiseInstance)>> {
+    if let Some(addr) = addr_opt {
+      let ri = self
+        .renoise_instances
+        .get_mut(&addr)
+        .ok_or(anyhow::Error::msg(
+          "couldn't find renoise instance in model",
+        ))?;
+      Ok(Some((addr.clone(), ri)))
+    } else {
+      Ok(None)
     }
   }
 }

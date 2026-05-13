@@ -1,6 +1,6 @@
 use intercom::{InterMessageIncoming, InterMessageOutgoing, InterMessagePrefixed};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MessageFromRenoise {
   Hello,
   Goodbye,
@@ -25,6 +25,7 @@ impl InterMessageIncoming for MessageFromRenoise {
   }
 }
 
+#[derive(Debug, Clone)]
 pub enum MessageToRenoise {
   Welcome,
   LoadSong(String),
@@ -34,6 +35,7 @@ pub enum MessageToRenoise {
   MuteTrackSequenceSlot(u64, u64, bool),
   BypassEffect(u64, u64, bool),
   SetParameterValue(u64, u64, u64, f64),
+  SetBPM(f64),
 }
 
 impl InterMessageOutgoing for MessageToRenoise {
@@ -59,6 +61,7 @@ impl InterMessageOutgoing for MessageToRenoise {
       Self::SetParameterValue(t, e, p, v) => {
         Ok(format!("setParameterValue,{},{},{},{}", t, e, p, v))
       }
+      Self::SetBPM(bpm) => Ok(format!("setBPM,{}", bpm)),
     }
   }
 }
