@@ -87,7 +87,7 @@ impl ViewLPM3Matrix {
                           RenoiseCommunicator::send_message(
                             server,
                             risa.clone(),
-                            MessageToRenoise::MuteTrack(*c, state),
+                            MessageToRenoise::MuteTrack(*c, !state),
                           )?;
                         }
                         trace!(

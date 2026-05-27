@@ -104,6 +104,21 @@ impl ViewLCXL2Panel {
                   RenoiseCommunicator::send_message(server, risa_a, MessageToRenoise::SetBPM(bpm))?;
                   RenoiseCommunicator::send_message(server, risa_b, MessageToRenoise::SetBPM(bpm))?;
                   trace!("moved bpm to {}", bpm);
+                } else if pos == LCXL2Position::Knob(8, 1) {
+                  let f = (p as f64) / 127.;
+                  let vol_a = (2. - f * 2.).min(1.);
+                  let vol_b = (f * 2.).min(1.);
+                  RenoiseCommunicator::send_message(
+                    server,
+                    risa_a,
+                    MessageToRenoise::SetMasterVolume(vol_a),
+                  )?;
+                  RenoiseCommunicator::send_message(
+                    server,
+                    risa_b,
+                    MessageToRenoise::SetMasterVolume(vol_b),
+                  )?;
+                  trace!("moved a/b volume to {}", f);
                 }
               }
             }

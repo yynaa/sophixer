@@ -36,6 +36,7 @@ pub enum MessageToRenoise {
   BypassEffect(u64, u64, bool),
   SetParameterValue(u64, u64, u64, f64),
   SetBPM(f64),
+  SetMasterVolume(f64),
 }
 
 impl InterMessageOutgoing for MessageToRenoise {
@@ -62,6 +63,7 @@ impl InterMessageOutgoing for MessageToRenoise {
         Ok(format!("setParameterValue,{},{},{},{}", t, e, p, v))
       }
       Self::SetBPM(bpm) => Ok(format!("setBPM,{}", bpm)),
+      Self::SetMasterVolume(vol) => Ok(format!("setMasterVolume,{}", vol)),
     }
   }
 }

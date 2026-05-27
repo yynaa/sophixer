@@ -40,6 +40,12 @@ class "Client"
         if bpm ~= nil then
           renoise.song().transport.bpm = bpm
         end
+      elseif sub[1] == "setMasterVolume" then
+        local vol = tonumber(sub[2])
+        if vol ~= nil then
+          local master = renoise.song():track(renoise.song().sequencer_track_count + 1)
+          master.postfx_volume.value = vol
+        end
       end
     elseif #sub == 3 then
       if sub[1] == "playSection" then
