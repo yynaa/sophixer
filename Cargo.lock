@@ -3689,6 +3689,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tin-midi-clock"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "midir",
+ "thiserror 2.0.17",
+]
+
+[[package]]
 name = "tiny-skia"
 version = "0.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
