@@ -1,12 +1,11 @@
-use eframe::egui::{color_picker::color_edit_button_srgb, ComboBox, DragValue};
-use sophixer_core::song_data::{CycleEffectParameterValue, SongButton, SongButtonAction};
+use eframe::egui::{ComboBox, DragValue, color_picker::color_edit_button_srgb};
+use sophixer_core::data::buttons::{CycleEffectParameterValue, SongButton, SongButtonAction};
 
 use crate::windows::Window;
 
 pub struct ButtonEditor {
   song_id: String,
-  section_id: i64,
-  button_id: i64,
+  pos: (i64, i64),
 
   selected_type: ActionType,
   u64_buffer_a: u64,
@@ -14,11 +13,10 @@ pub struct ButtonEditor {
 }
 
 impl ButtonEditor {
-  pub fn new(song_id: String, section_id: i64, button_id: i64, button: &SongButton) -> Self {
+  pub fn new(song_id: String, pos: (i64, i64), button: &SongButton) -> Self {
     Self {
       song_id,
-      section_id,
-      button_id,
+      pos,
 
       selected_type: ActionType::from_action(&button.action),
       u64_buffer_a: 0,
@@ -30,8 +28,8 @@ impl ButtonEditor {
 impl Window for ButtonEditor {
   fn title(&mut self) -> String {
     format!(
-      "button editor: {}@{}:{}",
-      self.song_id, self.section_id, self.button_id,
+      "button editor: {}@{},{}",
+      self.song_id, self.pos.0, self.pos.1,
     )
   }
 
@@ -42,216 +40,253 @@ impl Window for ButtonEditor {
   ) -> anyhow::Result<Option<Box<dyn Window>>> {
     if let Some(set) = &mut model.set {
       if let Some(song) = set.songs.get_mut(&self.song_id) {
-        if let Some(section) = song.sections.get_mut(&self.section_id) {
-          ui.heading("manage");
+        ui.heading("manage");
 
-          if ui.button("delete").clicked() {
-            section.buttons.remove(&self.button_id);
+        if ui.button("delete").clicked() {
+          song.buttons.remove(&self.pos);
+        }
+
+        if let Some(button) = song.buttons.get_mut(&self.pos) {
+          let before = self.selected_type;
+          ComboBox::from_label("action type")
+            .selected_text(format!("{:?}", self.selected_type))
+            .show_ui(ui, |ui| {
+              ui.selectable_value(
+                &mut self.selected_type,
+                ActionType::ToggleChannels,
+                "ToggleChannels",
+              );
+              ui.selectable_value(
+                &mut self.selected_type,
+                ActionType::ToggleTrackPatterns,
+                "ToggleTrackPatterns",
+              );
+              ui.selectable_value(
+                &mut self.selected_type,
+                ActionType::ToggleEffectBypass,
+                "ToggleEffectBypass",
+              );
+              ui.selectable_value(
+                &mut self.selected_type,
+                ActionType::CycleEffectParameterValue,
+                "CycleEffectParameterValue",
+              );
+              ui.selectable_value(
+                &mut self.selected_type,
+                ActionType::PlaySample,
+                "PlaySample",
+              );
+            });
+
+          if before != self.selected_type {
+            button.action = self.selected_type.to_action();
           }
 
-          if let Some(button) = section.buttons.get_mut(&self.button_id) {
-            let before = self.selected_type;
-            ComboBox::from_label("action type")
-              .selected_text(format!("{:?}", self.selected_type))
-              .show_ui(ui, |ui| {
-                ui.selectable_value(
-                  &mut self.selected_type,
-                  ActionType::ToggleChannels,
-                  "ToggleChannels",
-                );
-                ui.selectable_value(
-                  &mut self.selected_type,
-                  ActionType::ToggleTrackPatterns,
-                  "ToggleTrackPatterns",
-                );
-                ui.selectable_value(
-                  &mut self.selected_type,
-                  ActionType::ToggleEffectBypass,
-                  "ToggleEffectBypass",
-                );
-                ui.selectable_value(
-                  &mut self.selected_type,
-                  ActionType::CycleEffectParameterValue,
-                  "CycleEffectParameterValue",
-                );
+          match &mut button.action {
+            SongButtonAction::ToggleTrackPatterns {
+              track_patterns,
+              default,
+              color_off,
+              color_on,
+            } => {
+              // TRACK PATTERNS
+
+              ui.heading("info");
+
+              ui.checkbox(default, "default");
+
+              ui.horizontal(|ui| {
+                ui.label("color off");
+                color_edit_button_srgb(ui, color_off);
               });
 
-            if before != self.selected_type {
-              button.action = self.selected_type.to_action();
+              ui.horizontal(|ui| {
+                ui.label("color on");
+                color_edit_button_srgb(ui, color_on);
+              });
+
+              ui.heading("track patterns");
+
+              let tpclone = track_patterns.clone();
+              let mut tps = tpclone.iter().collect::<Vec<&(u64, u64)>>();
+              tps.sort();
+              for tp in tps {
+                ui.horizontal(|ui| {
+                  ui.label(format!("track {} pos {}", tp.0, tp.1));
+                  if ui.button("remove").clicked() {
+                    track_patterns.remove(tp);
+                  }
+                });
+              }
+              ui.horizontal(|ui| {
+                ui.label("track");
+                ui.add(DragValue::new(&mut self.u64_buffer_a));
+                ui.label("pos");
+                ui.add(DragValue::new(&mut self.u64_buffer_b));
+                if ui.button("add").clicked() {
+                  track_patterns.insert((self.u64_buffer_a, self.u64_buffer_b));
+                }
+              });
             }
+            SongButtonAction::ToggleChannels {
+              channels,
+              default,
+              color_off,
+              color_on,
+            } => {
+              // CHANNELS
 
-            match &mut button.action {
-              SongButtonAction::ToggleTrackPatterns {
-                track_patterns,
-                default,
-                color_off,
-                color_on,
-              } => {
-                // TRACK PATTERNS
+              ui.heading("info");
 
-                ui.heading("info");
+              ui.checkbox(default, "default");
 
-                ui.checkbox(default, "default");
+              ui.horizontal(|ui| {
+                ui.label("color off");
+                color_edit_button_srgb(ui, color_off);
+              });
 
+              ui.horizontal(|ui| {
+                ui.label("color on");
+                color_edit_button_srgb(ui, color_on);
+              });
+
+              ui.heading("track patterns");
+
+              let tpclone = channels.clone();
+              let mut tps = tpclone.iter().collect::<Vec<&u64>>();
+              tps.sort();
+              for tp in tps {
                 ui.horizontal(|ui| {
-                  ui.label("color off");
-                  color_edit_button_srgb(ui, color_off);
+                  ui.label(format!("track {}", tp));
+                  if ui.button("remove").clicked() {
+                    channels.remove(tp);
+                  }
                 });
-
-                ui.horizontal(|ui| {
-                  ui.label("color on");
-                  color_edit_button_srgb(ui, color_on);
-                });
-
-                ui.heading("track patterns");
-
-                let tpclone = track_patterns.clone();
-                let mut tps = tpclone.iter().collect::<Vec<&(u64, u64)>>();
-                tps.sort();
-                for tp in tps {
-                  ui.horizontal(|ui| {
-                    ui.label(format!("track {} pos {}", tp.0, tp.1));
-                    if ui.button("remove").clicked() {
-                      track_patterns.remove(tp);
-                    }
-                  });
+              }
+              ui.horizontal(|ui| {
+                ui.label("track");
+                ui.add(DragValue::new(&mut self.u64_buffer_a));
+                if ui.button("add").clicked() {
+                  channels.insert(self.u64_buffer_a);
                 }
+              });
+            }
+            SongButtonAction::ToggleEffectBypass {
+              track,
+              effect,
+              default,
+              color_off,
+              color_on,
+            } => {
+              // EFFECT
+
+              ui.heading("info");
+
+              ui.horizontal(|ui| {
+                ui.label("track");
+                ui.add(DragValue::new(track));
+              });
+
+              ui.horizontal(|ui| {
+                ui.label("effect");
+                ui.add(DragValue::new(effect));
+              });
+
+              ui.checkbox(default, "default");
+
+              ui.horizontal(|ui| {
+                ui.label("color off");
+                color_edit_button_srgb(ui, color_off);
+              });
+
+              ui.horizontal(|ui| {
+                ui.label("color on");
+                color_edit_button_srgb(ui, color_on);
+              });
+            }
+            SongButtonAction::CycleEffectParameterValue {
+              track,
+              effect,
+              param,
+              default,
+              cycles,
+            } => {
+              // CYCLES
+
+              ui.heading("info");
+
+              ui.horizontal(|ui| {
+                ui.label("track");
+                ui.add(DragValue::new(track));
+              });
+
+              ui.horizontal(|ui| {
+                ui.label("effect");
+                ui.add(DragValue::new(effect));
+              });
+
+              ui.horizontal(|ui| {
+                ui.label("param");
+                ui.add(DragValue::new(param));
+              });
+
+              ui.horizontal(|ui| {
+                ui.label("default");
+                ui.add(DragValue::new(default).range(0..=(cycles.len() - 1)));
+              });
+
+              ui.heading("cycles");
+
+              for c in cycles.iter_mut() {
                 ui.horizontal(|ui| {
-                  ui.label("track");
-                  ui.add(DragValue::new(&mut self.u64_buffer_a));
-                  ui.label("pos");
-                  ui.add(DragValue::new(&mut self.u64_buffer_b));
-                  if ui.button("add").clicked() {
-                    track_patterns.insert((self.u64_buffer_a, self.u64_buffer_b));
-                  }
+                  ui.label("value");
+                  ui.add(DragValue::new(&mut c.value).speed(0.05));
+                  ui.label("color");
+                  color_edit_button_srgb(ui, &mut c.color);
                 });
               }
-              SongButtonAction::ToggleChannels {
-                channels,
-                default,
-                color_off,
-                color_on,
-              } => {
-                // CHANNELS
-
-                ui.heading("info");
-
-                ui.checkbox(default, "default");
-
-                ui.horizontal(|ui| {
-                  ui.label("color off");
-                  color_edit_button_srgb(ui, color_off);
-                });
-
-                ui.horizontal(|ui| {
-                  ui.label("color on");
-                  color_edit_button_srgb(ui, color_on);
-                });
-
-                ui.heading("track patterns");
-
-                let tpclone = channels.clone();
-                let mut tps = tpclone.iter().collect::<Vec<&u64>>();
-                tps.sort();
-                for tp in tps {
-                  ui.horizontal(|ui| {
-                    ui.label(format!("track {}", tp));
-                    if ui.button("remove").clicked() {
-                      channels.remove(tp);
-                    }
-                  });
+              ui.horizontal(|ui| {
+                if ui.button("-").clicked() && cycles.len() > 0 {
+                  cycles.pop();
                 }
-                ui.horizontal(|ui| {
-                  ui.label("track");
-                  ui.add(DragValue::new(&mut self.u64_buffer_a));
-                  if ui.button("add").clicked() {
-                    channels.insert(self.u64_buffer_a);
-                  }
-                });
-              }
-              SongButtonAction::ToggleEffectBypass {
-                track,
-                effect,
-                default,
-                color_off,
-                color_on,
-              } => {
-                // EFFECT
-
-                ui.heading("info");
-
-                ui.horizontal(|ui| {
-                  ui.label("track");
-                  ui.add(DragValue::new(track));
-                });
-
-                ui.horizontal(|ui| {
-                  ui.label("effect");
-                  ui.add(DragValue::new(effect));
-                });
-
-                ui.checkbox(default, "default");
-
-                ui.horizontal(|ui| {
-                  ui.label("color off");
-                  color_edit_button_srgb(ui, color_off);
-                });
-
-                ui.horizontal(|ui| {
-                  ui.label("color on");
-                  color_edit_button_srgb(ui, color_on);
-                });
-              }
-              SongButtonAction::CycleEffectParameterValue {
-                track,
-                effect,
-                param,
-                default,
-                cycles,
-              } => {
-                // CYCLES
-
-                ui.heading("info");
-
-                ui.horizontal(|ui| {
-                  ui.label("track");
-                  ui.add(DragValue::new(track));
-                });
-
-                ui.horizontal(|ui| {
-                  ui.label("effect");
-                  ui.add(DragValue::new(effect));
-                });
-
-                ui.horizontal(|ui| {
-                  ui.label("param");
-                  ui.add(DragValue::new(param));
-                });
-
-                ui.horizontal(|ui| {
-                  ui.label("default");
-                  ui.add(DragValue::new(default).range(0..=(cycles.len() - 1)));
-                });
-
-                ui.heading("cycles");
-
-                for c in cycles.iter_mut() {
-                  ui.horizontal(|ui| {
-                    ui.label("value");
-                    ui.add(DragValue::new(&mut c.value).speed(0.05));
-                    ui.label("color");
-                    color_edit_button_srgb(ui, &mut c.color);
-                  });
+                if ui.button("+").clicked() {
+                  cycles.push(CycleEffectParameterValue::default());
                 }
-                ui.horizontal(|ui| {
-                  if ui.button("-").clicked() && cycles.len() > 0 {
-                    cycles.pop();
-                  }
-                  if ui.button("+").clicked() {
-                    cycles.push(CycleEffectParameterValue::default());
-                  }
-                });
-              }
+              });
+            }
+            SongButtonAction::PlaySample {
+              track,
+              pitch,
+              volume,
+              sample,
+              color,
+            } => {
+              ui.heading("info");
+
+              ui.horizontal(|ui| {
+                ui.label("track");
+                ui.add(DragValue::new(track));
+              });
+
+              ui.horizontal(|ui| {
+                ui.label("pitch");
+                ui.add(DragValue::new(pitch));
+              });
+
+              ui.horizontal(|ui| {
+                ui.label("volume");
+                ui.add(DragValue::new(volume));
+              });
+
+              ui.horizontal(|ui| {
+                ui.label("sample");
+                ui.add(DragValue::new(sample));
+              });
+
+              ui.horizontal(|ui| {
+                ui.label("color");
+                color_edit_button_srgb(ui, color);
+              });
             }
           }
         }
@@ -268,6 +303,7 @@ enum ActionType {
   ToggleTrackPatterns,
   ToggleEffectBypass,
   CycleEffectParameterValue,
+  PlaySample,
 }
 
 impl ActionType {
@@ -299,6 +335,13 @@ impl ActionType {
         color_off: _,
         color_on: _,
       } => Self::ToggleTrackPatterns,
+      SongButtonAction::PlaySample {
+        track: _,
+        pitch: _,
+        volume: _,
+        sample: _,
+        color: _,
+      } => Self::PlaySample,
     }
   }
 
@@ -310,6 +353,7 @@ impl ActionType {
       Self::CycleEffectParameterValue => {
         SongButtonAction::default_cycle_effect_parameter_value().unwrap()
       }
+      Self::PlaySample => SongButtonAction::default_play_sample().unwrap(),
     }
   }
 }

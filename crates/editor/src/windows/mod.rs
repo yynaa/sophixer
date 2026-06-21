@@ -3,7 +3,7 @@ use anyhow::Result;
 use crate::Model;
 
 pub mod button_editor;
-pub mod section_editor;
+pub mod pattern_editor;
 pub mod set_editor;
 pub mod song_editor;
 pub mod song_new;

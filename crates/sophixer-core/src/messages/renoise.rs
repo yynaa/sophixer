@@ -29,7 +29,8 @@ impl InterMessageIncoming for MessageFromRenoise {
 pub enum MessageToRenoise {
   Welcome,
   LoadSong(String),
-  PlaySection(u64, u64),
+  PlaySection(u64),
+  SetLoop(u64, u64),
   StopTransport,
   MuteTrack(u64, bool),
   MuteTrackSequenceSlot(u64, u64, bool),
@@ -44,7 +45,8 @@ impl InterMessageOutgoing for MessageToRenoise {
     match self {
       Self::Welcome => Ok(String::from("welcome")),
       Self::LoadSong(s) => Ok(format!("loadSong,{}", s)),
-      Self::PlaySection(s, l) => Ok(format!("playSection,{},{}", s + 1, l)),
+      Self::PlaySection(s) => Ok(format!("playSection,{}", s + 1)),
+      Self::SetLoop(s, e) => Ok(format!("setLoop,{},{}", s + 1, e + 1)),
       Self::StopTransport => Ok(String::from("stopTransport")),
       Self::MuteTrack(t, b) => Ok(format!("muteTrack,{},{}", t, if b { 0 } else { 1 })),
       Self::MuteTrackSequenceSlot(t, s, b) => Ok(format!(

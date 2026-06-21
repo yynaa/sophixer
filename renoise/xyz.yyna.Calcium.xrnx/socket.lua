@@ -35,6 +35,13 @@ class "Client"
         print("load song: " .. sub[2])
         renoise.app():load_song(sub[2])
         loading_song = true
+      elseif sub[1] == "playSection" then
+        local seq = tonumber(sub[2])
+        if seq ~= nil then
+          schedule_sequence(seq)
+        else
+          warn("invalid section numbers (NaN)")
+        end
       elseif sub[1] == "setBPM" then
         local bpm = tonumber(sub[2])
         if bpm ~= nil then
@@ -48,20 +55,19 @@ class "Client"
         end
       end
     elseif #sub == 3 then
-      if sub[1] == "playSection" then
-        local seq = tonumber(sub[2])
-        local length = tonumber(sub[3])
-        if seq ~= nil and length ~= nil then
-          schedule_sequence(seq)
-          set_loop(seq, seq + length - 1)
-        else
-          warn("invalid section numbers (NaN)")
-        end
-      elseif sub[1] == "muteTrack" then
+      if sub[1] == "muteTrack" then
         local track = tonumber(sub[2])
         local mute = sub[3] == "1"
         if track ~= nil then
           mute_track(track, mute)
+        else
+          warn("invalid track number (NaN)")
+        end
+      elseif sub[1] == "setLoop" then
+        local loop_start = tonumber(sub[2])
+        local loop_end = tonumber(sub[3])
+        if loop_start ~= nil and loop_end ~= nil then
+          set_loop(loop_start, loop_end)
         else
           warn("invalid track number (NaN)")
         end

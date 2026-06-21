@@ -29,6 +29,11 @@ impl Window for SetEditor {
           ui.label("authors");
           ui.text_edit_singleline(&mut set.authors);
         });
+
+        ui.horizontal(|ui| {
+          ui.label(".xrns path");
+          ui.text_edit_singleline(&mut set.xrns_path);
+        });
       }
     }
 

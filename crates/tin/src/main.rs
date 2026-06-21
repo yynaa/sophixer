@@ -5,40 +5,36 @@ mod model;
 mod servers;
 mod views;
 
-use crate::model::TinModel;
-use crate::servers::bismuth::BismuthCommunicator;
+use crate::model::{LPM3View, TinModel};
 use crate::servers::renoise::RenoiseCommunicator;
-use crate::views::lcxl2_panel::ViewLCXL2Panel;
 use crate::views::lpm3_matrix::ViewLPM3Matrix;
+use crate::views::lpm3_songlist::ViewLPM3SongList;
 use anyhow::Result;
 use argparse::{ArgumentParser, Store};
-use intercom::server::udp::UdpServer;
 use intercom::server::InterServer;
-use sophixer_core::song_data::Set;
-use std::sync::atomic::{AtomicBool, Ordering};
+use intercom::server::udp::UdpServer;
+use std::fs::read_to_string;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
-use tin_drivers_midi::devices::launch_control_xl_mk2::driver::LCXL2Driver;
-use tin_drivers_midi::devices::launchpad_mini_mk3::LPM3Driver;
 use tin_drivers_midi::MidiDriver;
+use tin_drivers_midi::devices::launchpad_mini_mk3::LPM3Driver;
 
 fn main() -> Result<()> {
   pretty_env_logger::init();
 
-  let mut set_folder = ".".to_string();
+  let mut set_file = ".".to_string();
   {
     let mut ap = ArgumentParser::new();
     ap.set_description("main server for Sophixer");
-    ap.refer(&mut set_folder).add_argument(
-      "set folder",
-      Store,
-      "folder where the set is located (see docs)",
-    );
+    ap.refer(&mut set_file)
+      .add_argument("set file", Store, "file of the set in ron notation");
     ap.parse_args_or_exit();
   }
-  trace!("loading set in: {set_folder:?}");
+  trace!("loading set in: {set_file:?}");
 
-  let set = Set::from_folder(set_folder)?;
+  let set_string = read_to_string(set_file)?;
+  let set = ron::from_str(&set_string)?;
 
   let mut tin = TinModel::new(set);
 
@@ -51,11 +47,10 @@ fn main() -> Result<()> {
   })?;
 
   let mut lpm3driver = LPM3Driver::connect()?;
-  let mut lcxl2driver = LCXL2Driver::connect()?;
 
   let mut server = UdpServer::start("0.0.0.0:3000")?;
 
-  let mut view_lcxl2_panel = ViewLCXL2Panel::new();
+  let mut view_lpm3_songlist = ViewLPM3SongList::new(&tin);
   let mut view_lpm3_matrix = ViewLPM3Matrix::new();
 
   let mut instant = Instant::now();
@@ -67,40 +62,47 @@ fn main() -> Result<()> {
 
     server.fetch()?;
     RenoiseCommunicator::update_model(&mut tin, &server)?;
-    BismuthCommunicator::update_model(&mut tin, &server)?;
 
     let lpm3_inputs = lpm3driver.read()?;
-    let lcxl2_inputs = lcxl2driver.read()?;
 
-    view_lcxl2_panel.update(
-      &delta_time,
-      &mut tin,
-      &mut lcxl2driver,
-      lcxl2_inputs.clone(),
-      &server,
-    )?;
-    view_lpm3_matrix.update(
-      &delta_time,
-      &mut tin,
-      &mut lpm3driver,
-      lpm3_inputs.clone(),
-      &server,
-    )?;
+    match &tin.lpm3view {
+      LPM3View::Matrix => {
+        view_lpm3_matrix.update(
+          &delta_time,
+          &mut tin,
+          &mut lpm3driver,
+          lpm3_inputs.clone(),
+          &server,
+        )?;
+      }
+      LPM3View::SongList => {
+        view_lpm3_songlist.update(
+          &delta_time,
+          &mut tin,
+          &mut lpm3driver,
+          lpm3_inputs.clone(),
+          &server,
+        )?;
+      }
+    }
 
     lpm3driver.clear()?;
-    lcxl2driver.clear()?;
 
-    view_lpm3_matrix.draw(&tin, &mut lpm3driver)?;
-    view_lcxl2_panel.draw(&tin, &mut lcxl2driver)?;
+    match &tin.lpm3view {
+      LPM3View::Matrix => {
+        view_lpm3_matrix.draw(&tin, &mut lpm3driver)?;
+      }
+      LPM3View::SongList => {
+        view_lpm3_songlist.draw(&tin, &mut lpm3driver)?;
+      }
+    }
 
     lpm3driver.push()?;
-    lcxl2driver.push()?;
 
     instant = current_time;
   }
 
   lpm3driver.close()?;
-  lcxl2driver.close()?;
 
   Ok(())
 }

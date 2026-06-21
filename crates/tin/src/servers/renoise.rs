@@ -1,16 +1,8 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use anyhow::Result;
 use intercom::server::{udp::UdpServer, InterServerCommunicator};
-use sophixer_core::messages::{
-  bismuth::MessageToBismuth,
-  renoise::{MessageFromRenoise, MessageToRenoise},
-};
+use sophixer_core::messages::renoise::{MessageFromRenoise, MessageToRenoise};
 
-use crate::{
-  model::{RenoiseInstance, TinModel},
-  servers::bismuth::BismuthCommunicator,
-};
+use crate::model::TinModel;
 
 pub struct RenoiseCommunicator {}
 impl InterServerCommunicator<UdpServer, MessageFromRenoise, MessageToRenoise>
@@ -25,33 +17,12 @@ impl RenoiseCommunicator {
       for (from, msg) in messages {
         match msg {
           MessageFromRenoise::Hello => {
-            model.renoise_instances.insert(from, RenoiseInstance::new());
-            let new_id = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-            model.renoise_instance_ids.insert(new_id.clone(), from);
-            RenoiseCommunicator::send_message(server, from, MessageToRenoise::Welcome)?;
-            if let Some(bismuth) = model.bismuth_instance {
-              BismuthCommunicator::send_message(
-                server,
-                bismuth,
-                MessageToBismuth::RenoiseInstanceAdded(new_id),
-              )?;
-            }
-            info!("renoise instance from {} connected", from);
+            model.renoise_socket = Some(from);
+            info!("renoise connected");
           }
           MessageFromRenoise::Goodbye => {
-            model.renoise_instances.remove(&from);
-            if let Some(bismuth) = model.bismuth_instance {
-              if let Some(id) = model.renoise_instance_ids.get_by_right(&from) {
-                BismuthCommunicator::send_message(
-                  server,
-                  bismuth,
-                  MessageToBismuth::RenoiseInstanceRemoved(id.clone()),
-                )?;
-              }
-            }
-            model.renoise_instance_ids.remove_by_right(&from);
-            model.renoise_instance_focus = None;
-            info!("renoise instance from {} disconnected", from);
+            model.renoise_socket = None;
+            info!("renoise disconnected");
           }
         }
       }

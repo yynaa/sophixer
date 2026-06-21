@@ -1,4 +1,4 @@
-use sophixer_core::song_data::Song;
+use sophixer_core::data::Song;
 
 use crate::windows::Window;
 
@@ -29,7 +29,7 @@ impl Window for SongNew {
       if ui.button("create").clicked() {
         set.songs.insert(
           self.new_id.clone(),
-          Song::new(self.new_id.clone(), String::new(), String::new()).unwrap(),
+          Song::new(self.new_id.clone(), String::new()).unwrap(),
         );
       }
     }

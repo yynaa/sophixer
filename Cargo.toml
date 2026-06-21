@@ -5,9 +5,6 @@ members = [
     "crates/tin-drivers-midi",
     # apps
     "crates/tin",
-    "crates/bismuth",
-    # cli
-    "crates/editor-cli",
     # editor,
     "crates/editor"
 ]
@@ -18,7 +15,7 @@ repository = "https://github.com/yynaa/sophixer"
 authors = ["yyna <me@yyna.xyz>"]
 license = "MIT"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [workspace.dependencies]
 anyhow = "1.0.98"

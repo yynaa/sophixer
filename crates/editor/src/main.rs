@@ -1,7 +1,15 @@
-use eframe::egui::{self};
-use sophixer_core::song_data::Set;
+#[macro_use]
+extern crate log;
 
-use crate::windows::{set_editor::SetEditor, song_editor::SongEditor, song_new::SongNew, Window};
+use std::{
+  fs::{File, read_to_string},
+  io::Write,
+};
+
+use eframe::egui::{self};
+use sophixer_core::data::Set;
+
+use crate::windows::{Window, set_editor::SetEditor, song_editor::SongEditor, song_new::SongNew};
 
 pub mod windows;
 
@@ -27,7 +35,7 @@ fn main() -> eframe::Result {
 
 struct App {
   model: Model,
-  set_folder: Option<String>,
+  set_file: Option<String>,
   windows: Vec<(Box<dyn Window>, bool)>,
 }
 
@@ -45,7 +53,7 @@ impl Default for App {
   fn default() -> Self {
     Self {
       model: Model::default(),
-      set_folder: None,
+      set_file: None,
       windows: Vec::new(),
     }
   }
@@ -54,17 +62,34 @@ impl Default for App {
 impl eframe::App for App {
   fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
     egui::CentralPanel::default().show_inside(ui, |ui| {
-      if ui.button("Open set folder…").clicked() {
-        if let Some(path) = rfd::FileDialog::new().pick_folder() {
-          self.model.set = Some(Set::from_folder(path.to_string_lossy().to_string()).unwrap());
-          self.set_folder = Some(path.to_string_lossy().to_string());
+      if ui.button("New set").clicked() {
+        if let Some(path) = rfd::FileDialog::new().save_file() {
+          self.model.set = Some(Set::new(String::new(), String::new(), String::new()).unwrap());
+          self.set_file = Some(path.to_string_lossy().to_string());
         }
       }
 
-      if let Some(set_folder) = &self.set_folder {
+      if ui.button("Open set…").clicked() {
+        if let Some(path) = rfd::FileDialog::new().pick_file() {
+          if let Ok(set_string) = read_to_string(path.clone()) {
+            self.model.set = Some(ron::from_str(&set_string).unwrap());
+            self.set_file = Some(path.to_string_lossy().to_string());
+          } else {
+            error!("couldn't load set")
+          }
+        }
+      }
+
+      if let Some(set_file) = &self.set_file {
         if let Some(set) = &mut self.model.set {
           if ui.button("Save set").clicked() {
-            set.save_in_folder(set_folder.clone()).unwrap();
+            if let Ok(mut file) = File::create(set_file) {
+              file
+                .write_all(&ron::to_string(set).unwrap().into_bytes())
+                .unwrap();
+            } else {
+              error!("couldn't save set in file")
+            }
           }
 
           if ui.button("Set Editor").clicked() {
