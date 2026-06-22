@@ -1,5 +1,5 @@
 use anyhow::Result;
-use intercom::server::{udp::UdpServer, InterServerCommunicator};
+use intercom::server::{InterServerCommunicator, udp::UdpServer};
 use sophixer_core::messages::renoise::{MessageFromRenoise, MessageToRenoise};
 
 use crate::model::TinModel;
@@ -19,6 +19,7 @@ impl RenoiseCommunicator {
           MessageFromRenoise::Hello => {
             model.renoise_socket = Some(from);
             info!("renoise connected");
+            RenoiseCommunicator::send_message(server, from, MessageToRenoise::Welcome)?;
           }
           MessageFromRenoise::Goodbye => {
             model.renoise_socket = None;

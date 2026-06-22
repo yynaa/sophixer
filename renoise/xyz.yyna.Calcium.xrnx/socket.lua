@@ -3,6 +3,7 @@ class "Client"
   	self.socket = renoise.Socket.create_client("localhost", 3000, 2)
     self.connected = false
     self:send("hello")
+    renoise.app():show_status("attempting to connect to tin... is tin running?")
   end
 
   function Client:destroy()
@@ -25,7 +26,7 @@ class "Client"
     local sub = string_split(msg, ",")
     if #sub == 1 then
       if sub[1] == "welcome" then
-        renoise.app():show_prompt("Calcium connected", "Calcium connected", { "OK" })
+        renoise.app():show_status("connected to tin!")
       elseif sub[1] == "stopTransport" then
         renoise.song().transport:stop()
       end
