@@ -1,10 +1,11 @@
+DEBUG = true
+
 require("utils")
 
 require("playback_control")
 
 require("socket")
 
-loading_song = false
 
 ---@type Client?
 local client = nil
@@ -15,7 +16,7 @@ local function client_timer_function()
 end
 
 renoise.tool():add_menu_entry({
-	name = "Main Menu:Tools:Calcium:Connect",
+	name = "Main Menu:Tools:Connect to Tin",
 	active = function() return client == nil end,
 	invoke = function()
 	  client = Client()
@@ -26,7 +27,7 @@ renoise.tool():add_menu_entry({
 })
 
 renoise.tool():add_menu_entry({
-	name = "Main Menu:Tools:Calcium:Disconnect",
+	name = "Main Menu:Tools:Disconnect from Tin",
 	active = function() return client ~= nil end,
 	invoke = function()
 	  if client ~= nil then
@@ -38,10 +39,3 @@ renoise.tool():add_menu_entry({
 		-- renoise.song().transport.sync_mode = renoise.Transport.SYNC_MODE_INTERNAL
 	end,
 })
-
-renoise.tool().app_new_document_observable:add_notifier(function()
-  if loading_song then --avoids multiple calls
-    print("song loaded")
-    loading_song = false
-  end
-end)

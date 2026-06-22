@@ -1,7 +1,7 @@
 use eframe::egui::{DragValue, color_picker::color_edit_button_srgb};
 use sophixer_core::data::{
   Song, SongPattern,
-  buttons::{SongButton, SongButtonAction},
+  buttons::{ActionDescriptor, SongButton, SongButtonAction},
 };
 use tin_drivers_midi::{
   MidiDriver,
@@ -153,7 +153,7 @@ impl<'a> Window for SongEditor {
           if ui.button("..new").clicked() {
             song.buttons.insert(
               (self.new_button_x, self.new_button_y),
-              SongButton::new(SongButtonAction::default_play_sample().unwrap()).unwrap(),
+              SongButton::new(SongButtonAction::default()).unwrap(),
             );
           }
         });

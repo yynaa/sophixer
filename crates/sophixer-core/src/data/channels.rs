@@ -11,6 +11,12 @@ pub enum Channel {
   Master,
 }
 
+impl Default for Channel {
+  fn default() -> Self {
+    Self::Master
+  }
+}
+
 impl Channel {
   pub fn to_renoise_number(&self) -> u64 {
     match self {

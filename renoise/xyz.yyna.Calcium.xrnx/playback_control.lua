@@ -3,6 +3,11 @@ function schedule_sequence(position)
   renoise.song().transport:set_scheduled_sequence(position)
 end
 
+---@param position number
+function trigger_sequence(position)
+  renoise.song().transport:trigger_sequence(position)
+end
+
 ---@param s number
 ---@param e number
 function set_loop(s, e)
@@ -30,7 +35,7 @@ function set_effect_param_value(track, effect, param, value)
 end
 
 -- DEBUG
-if true then
+if DEBUG then
   renoise.tool():add_menu_entry({
 	name = "Main Menu:Tools:Calcium:Debug:Schedule Sequence 0",
 	invoke = function()

@@ -3,7 +3,6 @@ class "Client"
   	self.socket = renoise.Socket.create_client("localhost", 3000, 2)
     self.connected = false
     self:send("hello")
-    self.queue = {}
   end
 
   function Client:destroy()
@@ -14,7 +13,7 @@ class "Client"
 
   function Client:send(msg)
   	if self.socket then
-      print("sending " .. msg)
+      print("sending: " .. msg)
   		local success, error = self.socket:send("calcium:" .. msg .. ";")
   		if not success then
   			warn("couldn't send message to server: " .. error)
@@ -31,18 +30,7 @@ class "Client"
         renoise.song().transport:stop()
       end
     elseif #sub == 2 then
-      if sub[1] == "loadSong" then
-        print("load song: " .. sub[2])
-        renoise.app():load_song(sub[2])
-        loading_song = true
-      elseif sub[1] == "playSection" then
-        local seq = tonumber(sub[2])
-        if seq ~= nil then
-          schedule_sequence(seq)
-        else
-          warn("invalid section numbers (NaN)")
-        end
-      elseif sub[1] == "setBPM" then
+      if sub[1] == "setBPM" then
         local bpm = tonumber(sub[2])
         if bpm ~= nil then
           renoise.song().transport.bpm = bpm
@@ -62,6 +50,18 @@ class "Client"
           mute_track(track, mute)
         else
           warn("invalid track number (NaN)")
+        end
+      elseif sub[1] == "playSection" then
+        local seq = tonumber(sub[2])
+        local force = sub[3] == "1"
+        if seq ~= nil then
+          if force then
+            trigger_sequence(seq)
+          else
+            schedule_sequence(seq)
+          end
+        else
+          warn("invalid section numbers (NaN)")
         end
       elseif sub[1] == "setLoop" then
         local loop_start = tonumber(sub[2])
@@ -108,15 +108,7 @@ class "Client"
   end
   
   function Client:callback()
-    if self.socket and not loading_song then
-      if #self.queue > 0 then
-        print("queue")
-        for _, msg in ipairs(self.queue) do
-          self:handle_message(msg)
-        end
-        self.queue = {}
-      end
-      
+    if self.socket then
       ---@type string|nil
       ---@diagnostic disable-next-line: assign-type-mismatch
       local s, _ = self.socket:receive("*all", 1)
@@ -124,11 +116,8 @@ class "Client"
         local messages = string_split(s, ";")
         for _, msg in ipairs(messages) do
           if #msg > 0 then
-            if loading_song then
-              table.insert(self.queue, msg)
-            else
-              self:handle_message(msg)
-            end
+            print("received: " .. msg)
+            self:handle_message(msg)
           end
         end
       end

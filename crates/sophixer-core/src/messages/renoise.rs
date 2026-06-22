@@ -29,7 +29,8 @@ impl InterMessageIncoming for MessageFromRenoise {
 pub enum MessageToRenoise {
   Welcome,
   LoadSong(String),
-  PlaySection(u64),
+  /// set bool to true for forcing replay
+  PlaySection(u64, bool),
   SetLoop(u64, u64),
   StopTransport,
   MuteTrack(u64, bool),
@@ -45,21 +46,21 @@ impl InterMessageOutgoing for MessageToRenoise {
     match self {
       Self::Welcome => Ok(String::from("welcome")),
       Self::LoadSong(s) => Ok(format!("loadSong,{}", s)),
-      Self::PlaySection(s) => Ok(format!("playSection,{}", s + 1)),
+      Self::PlaySection(s, f) => Ok(format!("playSection,{},{}", s + 1, if f { 1 } else { 0 })),
       Self::SetLoop(s, e) => Ok(format!("setLoop,{},{}", s + 1, e + 1)),
       Self::StopTransport => Ok(String::from("stopTransport")),
-      Self::MuteTrack(t, b) => Ok(format!("muteTrack,{},{}", t, if b { 0 } else { 1 })),
+      Self::MuteTrack(t, b) => Ok(format!("muteTrack,{},{}", t, if b { 1 } else { 0 })),
       Self::MuteTrackSequenceSlot(t, s, b) => Ok(format!(
         "muteTrackSequenceSlot,{},{},{}",
         t,
         s + 1,
-        if b { 0 } else { 1 }
+        if b { 1 } else { 0 }
       )),
       Self::BypassEffect(t, e, b) => Ok(format!(
         "bypassEffect,{},{},{}",
         t,
         e,
-        if b { 0 } else { 1 }
+        if b { 1 } else { 0 }
       )),
       Self::SetParameterValue(t, e, p, v) => {
         Ok(format!("setParameterValue,{},{},{},{}", t, e, p, v))

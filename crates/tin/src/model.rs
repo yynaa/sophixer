@@ -1,4 +1,7 @@
-use sophixer_core::data::{Set, buttons::SongButtonActionValue};
+use sophixer_core::data::{
+  Set,
+  buttons::{ActionDescriptor, SongButtonActionValue},
+};
 use std::{collections::HashMap, net::SocketAddr};
 
 pub enum LPM3View {

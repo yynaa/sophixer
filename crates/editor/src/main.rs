@@ -114,6 +114,19 @@ impl eframe::App for App {
               error!("couldn't save set in file")
             }
           }
+          if ui.button("Save set (pretty)").clicked() {
+            if let Ok(mut file) = File::create(set_file) {
+              file
+                .write_all(
+                  &ron::ser::to_string_pretty(set, ron::ser::PrettyConfig::default())
+                    .unwrap()
+                    .into_bytes(),
+                )
+                .unwrap();
+            } else {
+              error!("couldn't save set in file")
+            }
+          }
 
           if ui.button("Set Editor").clicked() {
             self.windows.push((Box::new(SetEditor::default()), true));

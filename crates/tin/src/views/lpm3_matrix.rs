@@ -6,15 +6,18 @@ use crate::{
 };
 use anyhow::Result;
 use intercom::server::{InterServerCommunicator, udp::UdpServer};
-use sophixer_core::messages::renoise::MessageToRenoise;
+use sophixer_core::{data::buttons::ActionDescriptor, messages::renoise::MessageToRenoise};
 use tin_drivers_midi::{
-  MidiDriver,
+  MidiDriver, MidiPhysicalState,
   devices::launchpad_mini_mk3::{LPM3Driver, LPM3InputMessage, LPM3Position, LPM3Visual},
 };
 
 pub struct ViewLPM3Matrix {
   pub camera: (i64, i64),
+
   control: bool,
+
+  insta_play: bool,
 }
 
 impl ViewLPM3Matrix {
@@ -22,6 +25,7 @@ impl ViewLPM3Matrix {
     Self {
       camera: (0, 0),
       control: false,
+      insta_play: false,
     }
   }
 
@@ -29,7 +33,7 @@ impl ViewLPM3Matrix {
     &mut self,
     _dt: &Duration,
     tin: &mut TinModel,
-    _lpm3: &mut LPM3Driver,
+    lpm3: &mut LPM3Driver,
     lpm3_inputs: VecDeque<LPM3InputMessage>,
     server: &UdpServer,
   ) -> Result<()> {
@@ -39,11 +43,11 @@ impl ViewLPM3Matrix {
         tin.lpm3view = LPM3View::SongList;
       }
 
-      if i == LPM3InputMessage::KeyPressed(LPM3Position::SSM) {
-        self.control = true;
+      if let MidiPhysicalState::Binary(b) = lpm3.get_position_state(LPM3Position::SSM)? {
+        self.control = b;
       }
-      if i == LPM3InputMessage::KeyReleased(LPM3Position::SSM) {
-        self.control = false;
+      if let MidiPhysicalState::Binary(b) = lpm3.get_position_state(LPM3Position::Grid(1, 8))? {
+        self.insta_play = b && !self.control;
       }
 
       if i == LPM3InputMessage::KeyPressed(LPM3Position::Left) {
@@ -77,10 +81,10 @@ impl ViewLPM3Matrix {
                 }
               }
             }
-          } else {
-            if i == LPM3InputMessage::KeyPressed(LPM3Position::Grid(1, 8)) {
+            if i == LPM3InputMessage::KeyPressed(LPM3Position::Grid(2, 8)) {
               RenoiseCommunicator::send_message(server, rsa, MessageToRenoise::StopTransport)?;
             }
+          } else {
           }
 
           // patterns
@@ -88,11 +92,10 @@ impl ViewLPM3Matrix {
             let y = *by - self.camera.1;
             if y >= 1 && y <= 7 {
               if i == LPM3InputMessage::KeyPressed(LPM3Position::Grid(9, y as u8)) {
-                // ri.send_start_next_beat = Some(*by);
                 RenoiseCommunicator::send_message(
                   server,
                   rsa,
-                  MessageToRenoise::PlaySection(pattern.start),
+                  MessageToRenoise::PlaySection(pattern.start, self.insta_play),
                 )?;
                 RenoiseCommunicator::send_message(
                   server,
@@ -170,12 +173,16 @@ impl ViewLPM3Matrix {
       }
 
       // control
-      if self.control {
-        // reset
-        lpm3.add(LPM3Visual::Static(LPM3Position::Grid(1, 8), 9))?;
-      } else {
-        // stop transport
-        lpm3.add(LPM3Visual::Static(LPM3Position::Grid(1, 8), 5))?;
+      if tin.renoise_socket.is_some() {
+        if self.control {
+          // reset
+          lpm3.add(LPM3Visual::Static(LPM3Position::Grid(1, 8), 9))?;
+          // stop transport
+          lpm3.add(LPM3Visual::Static(LPM3Position::Grid(2, 8), 5))?;
+        } else {
+          // instaplay
+          lpm3.add(LPM3Visual::Static(LPM3Position::Grid(1, 8), 69))?;
+        }
       }
 
       // sections
