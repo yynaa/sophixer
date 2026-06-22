@@ -12,6 +12,7 @@ use tin_drivers_midi::{MidiDriver, devices::launchpad_mini_mk3::LPM3Driver};
 
 use crate::windows::{Window, set_editor::SetEditor, song_editor::SongEditor, song_new::SongNew};
 
+pub mod widgets;
 pub mod windows;
 
 fn main() -> eframe::Result {

@@ -2,6 +2,8 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
+use crate::{data::channels::Channel, messages::renoise::MessageToRenoise};
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CycleEffectParameterValue {
   pub value: f64,
@@ -20,33 +22,33 @@ impl Default for CycleEffectParameterValue {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SongButtonAction {
   ToggleChannels {
-    channels: HashSet<u64>,
+    channels: HashSet<Channel>,
     default: bool,
     color_off: [u8; 3],
     color_on: [u8; 3],
   },
   ToggleTrackPatterns {
-    track_patterns: HashSet<(u64, u64)>,
+    track_patterns: HashSet<(Channel, u64)>,
     default: bool,
     color_off: [u8; 3],
     color_on: [u8; 3],
   },
   ToggleEffectBypass {
-    track: u64,
+    track: Channel,
     effect: u64,
     default: bool,
     color_off: [u8; 3],
     color_on: [u8; 3],
   },
   CycleEffectParameterValue {
-    track: u64,
+    track: Channel,
     effect: u64,
     param: u64,
     default: usize,
     cycles: Vec<CycleEffectParameterValue>,
   },
   PlaySample {
-    track: u64,
+    track: Channel,
     pitch: u8,
     volume: u8,
     sample: u64,
@@ -54,14 +56,15 @@ pub enum SongButtonAction {
   },
 }
 
-pub enum SongButtonActionDefault {
+#[derive(Clone, Copy)]
+pub enum SongButtonActionValue {
   None,
   Boolean(bool),
   Number(usize),
 }
 
 impl SongButtonAction {
-  pub fn get_default(&self) -> SongButtonActionDefault {
+  pub fn get_default(&self) -> SongButtonActionValue {
     match self {
       Self::PlaySample {
         track: _,
@@ -69,36 +72,35 @@ impl SongButtonAction {
         volume: _,
         sample: _,
         color: _,
-      } => SongButtonActionDefault::None,
+      } => SongButtonActionValue::None,
       Self::ToggleChannels {
         channels: _,
         default,
         color_off: _,
         color_on: _,
-      } => SongButtonActionDefault::Boolean(*default),
+      } => SongButtonActionValue::Boolean(*default),
       Self::CycleEffectParameterValue {
         track: _,
         effect: _,
         param: _,
         default,
         cycles: _,
-      } => SongButtonActionDefault::Number(*default),
+      } => SongButtonActionValue::Number(*default),
       Self::ToggleEffectBypass {
         track: _,
         effect: _,
         default,
         color_off: _,
         color_on: _,
-      } => SongButtonActionDefault::Boolean(*default),
+      } => SongButtonActionValue::Boolean(*default),
       Self::ToggleTrackPatterns {
         track_patterns: _,
         default,
         color_off: _,
         color_on: _,
-      } => SongButtonActionDefault::Boolean(*default),
+      } => SongButtonActionValue::Boolean(*default),
     }
   }
-
   pub fn get_default_color(&self) -> [u8; 3] {
     match self {
       Self::CycleEffectParameterValue {
@@ -155,6 +157,217 @@ impl SongButtonAction {
     }
   }
 
+  pub fn get_color(&self, value: SongButtonActionValue) -> Result<[u8; 3]> {
+    match (value, self) {
+      (
+        SongButtonActionValue::None,
+        Self::PlaySample {
+          track: _,
+          pitch: _,
+          volume: _,
+          sample: _,
+          color,
+        },
+      ) => Ok(*color),
+      (
+        SongButtonActionValue::Boolean(b),
+        Self::ToggleChannels {
+          channels: _,
+          default: _,
+          color_off,
+          color_on,
+        },
+      ) => Ok(match b {
+        true => *color_on,
+        false => *color_off,
+      }),
+      (
+        SongButtonActionValue::Boolean(b),
+        Self::ToggleEffectBypass {
+          track: _,
+          effect: _,
+          default: _,
+          color_off,
+          color_on,
+        },
+      ) => Ok(match b {
+        true => *color_on,
+        false => *color_off,
+      }),
+      (
+        SongButtonActionValue::Boolean(b),
+        Self::ToggleTrackPatterns {
+          track_patterns: _,
+          default: _,
+          color_off,
+          color_on,
+        },
+      ) => Ok(match b {
+        true => *color_on,
+        false => *color_off,
+      }),
+      (
+        SongButtonActionValue::Number(n),
+        Self::CycleEffectParameterValue {
+          track: _,
+          effect: _,
+          param: _,
+          default: _,
+          cycles,
+        },
+      ) => cycles
+        .get(n)
+        .map(|f| f.color)
+        .ok_or(anyhow::Error::msg("cycle not found")),
+      _ => Err(anyhow::Error::msg("invalid value")),
+    }
+  }
+  pub fn next(&self, value: SongButtonActionValue) -> Result<SongButtonActionValue> {
+    match (value, self) {
+      (
+        SongButtonActionValue::None,
+        Self::PlaySample {
+          track: _,
+          pitch: _,
+          volume: _,
+          sample: _,
+          color: _,
+        },
+      ) => Ok(SongButtonActionValue::None),
+      (
+        SongButtonActionValue::Boolean(b),
+        Self::ToggleChannels {
+          channels: _,
+          default: _,
+          color_off: _,
+          color_on: _,
+        },
+      ) => Ok(SongButtonActionValue::Boolean(!b)),
+      (
+        SongButtonActionValue::Boolean(b),
+        Self::ToggleEffectBypass {
+          track: _,
+          effect: _,
+          default: _,
+          color_off: _,
+          color_on: _,
+        },
+      ) => Ok(SongButtonActionValue::Boolean(!b)),
+      (
+        SongButtonActionValue::Boolean(b),
+        Self::ToggleTrackPatterns {
+          track_patterns: _,
+          default: _,
+          color_off: _,
+          color_on: _,
+        },
+      ) => Ok(SongButtonActionValue::Boolean(!b)),
+      (
+        SongButtonActionValue::Number(n),
+        Self::CycleEffectParameterValue {
+          track: _,
+          effect: _,
+          param: _,
+          default: _,
+          cycles,
+        },
+      ) => {
+        let len = cycles.len();
+        let mut new = n + 1;
+        if new >= len {
+          new = 0;
+        }
+        Ok(SongButtonActionValue::Number(new))
+      }
+      _ => Err(anyhow::Error::msg("invalid value")),
+    }
+  }
+  pub fn create_renoise_message(
+    &self,
+    value: SongButtonActionValue,
+  ) -> Result<Vec<MessageToRenoise>> {
+    match (value, self) {
+      #[allow(unused)]
+      (
+        SongButtonActionValue::None,
+        Self::PlaySample {
+          track,
+          pitch,
+          volume,
+          sample,
+          color: _,
+        },
+      ) => Ok(todo!()),
+      (
+        SongButtonActionValue::Boolean(b),
+        Self::ToggleChannels {
+          channels,
+          default: _,
+          color_off: _,
+          color_on: _,
+        },
+      ) => {
+        let mut msgs = Vec::new();
+        for c in channels {
+          msgs.push(MessageToRenoise::MuteTrack(c.to_renoise_number(), !b));
+        }
+        Ok(msgs)
+      }
+      (
+        SongButtonActionValue::Boolean(b),
+        Self::ToggleEffectBypass {
+          track,
+          effect,
+          default: _,
+          color_off: _,
+          color_on: _,
+        },
+      ) => Ok(vec![MessageToRenoise::BypassEffect(
+        track.to_renoise_number(),
+        *effect,
+        b,
+      )]),
+      (
+        SongButtonActionValue::Boolean(b),
+        Self::ToggleTrackPatterns {
+          track_patterns,
+          default: _,
+          color_off: _,
+          color_on: _,
+        },
+      ) => {
+        let mut msgs = Vec::new();
+        for (c, seq) in track_patterns {
+          msgs.push(MessageToRenoise::MuteTrackSequenceSlot(
+            c.to_renoise_number(),
+            *seq,
+            b,
+          ));
+        }
+        Ok(msgs)
+      }
+      (
+        SongButtonActionValue::Number(n),
+        Self::CycleEffectParameterValue {
+          track,
+          effect,
+          param,
+          default: _,
+          cycles,
+        },
+      ) => {
+        let c = cycles.get(n).ok_or(anyhow::Error::msg("no such cycle"))?;
+        Ok(vec![MessageToRenoise::SetParameterValue(
+          track.to_renoise_number(),
+          *effect,
+          *param,
+          c.value,
+        )])
+      }
+      _ => Err(anyhow::Error::msg("invalid value")),
+    }
+  }
+
   pub fn default_toggle_channels() -> Result<SongButtonAction> {
     Ok(SongButtonAction::ToggleChannels {
       channels: HashSet::new(),
@@ -175,7 +388,7 @@ impl SongButtonAction {
 
   pub fn default_toggle_effect_bypass() -> Result<SongButtonAction> {
     Ok(SongButtonAction::ToggleEffectBypass {
-      track: 1,
+      track: Channel::Master,
       effect: 1,
       default: true,
       color_off: [255, 0, 0],
@@ -185,7 +398,7 @@ impl SongButtonAction {
 
   pub fn default_cycle_effect_parameter_value() -> Result<SongButtonAction> {
     Ok(SongButtonAction::CycleEffectParameterValue {
-      track: 1,
+      track: Channel::Master,
       effect: 1,
       param: 1,
       default: 0,
@@ -198,7 +411,7 @@ impl SongButtonAction {
 
   pub fn default_play_sample() -> Result<SongButtonAction> {
     Ok(SongButtonAction::PlaySample {
-      track: 0,
+      track: Channel::Master,
       pitch: 48,
       volume: 255,
       sample: 0,

@@ -1,4 +1,5 @@
 pub mod buttons;
+pub mod channels;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};

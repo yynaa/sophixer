@@ -1,15 +1,19 @@
 use eframe::egui::{ComboBox, DragValue, color_picker::color_edit_button_srgb};
-use sophixer_core::data::buttons::{CycleEffectParameterValue, SongButton, SongButtonAction};
+use sophixer_core::data::{
+  buttons::{CycleEffectParameterValue, SongButton, SongButtonAction},
+  channels::Channel,
+};
 
-use crate::windows::Window;
+use crate::{widgets::channel_selector::channel_selector, windows::Window};
 
 pub struct ButtonEditor {
   song_id: String,
   pos: (i64, i64),
 
   selected_type: ActionType,
-  u64_buffer_a: u64,
-  u64_buffer_b: u64,
+
+  channel_buffer: Channel,
+  u64_buffer: u64,
 }
 
 impl ButtonEditor {
@@ -19,8 +23,9 @@ impl ButtonEditor {
       pos,
 
       selected_type: ActionType::from_action(&button.action),
-      u64_buffer_a: 0,
-      u64_buffer_b: 0,
+
+      channel_buffer: Channel::Master,
+      u64_buffer: 0,
     }
   }
 }
@@ -108,7 +113,7 @@ impl Window for ButtonEditor {
               ui.heading("track patterns");
 
               let tpclone = track_patterns.clone();
-              let mut tps = tpclone.iter().collect::<Vec<&(u64, u64)>>();
+              let mut tps = tpclone.iter().collect::<Vec<&(Channel, u64)>>();
               tps.sort();
               for tp in tps {
                 ui.horizontal(|ui| {
@@ -119,12 +124,11 @@ impl Window for ButtonEditor {
                 });
               }
               ui.horizontal(|ui| {
-                ui.label("track");
-                ui.add(DragValue::new(&mut self.u64_buffer_a));
+                channel_selector(&mut self.channel_buffer, ui);
                 ui.label("pos");
-                ui.add(DragValue::new(&mut self.u64_buffer_b));
+                ui.add(DragValue::new(&mut self.u64_buffer));
                 if ui.button("add").clicked() {
-                  track_patterns.insert((self.u64_buffer_a, self.u64_buffer_b));
+                  track_patterns.insert((self.channel_buffer.clone(), self.u64_buffer));
                 }
               });
             }
@@ -153,7 +157,7 @@ impl Window for ButtonEditor {
               ui.heading("track patterns");
 
               let tpclone = channels.clone();
-              let mut tps = tpclone.iter().collect::<Vec<&u64>>();
+              let mut tps = tpclone.iter().collect::<Vec<&Channel>>();
               tps.sort();
               for tp in tps {
                 ui.horizontal(|ui| {
@@ -164,10 +168,9 @@ impl Window for ButtonEditor {
                 });
               }
               ui.horizontal(|ui| {
-                ui.label("track");
-                ui.add(DragValue::new(&mut self.u64_buffer_a));
+                channel_selector(&mut self.channel_buffer, ui);
                 if ui.button("add").clicked() {
-                  channels.insert(self.u64_buffer_a);
+                  channels.insert(self.channel_buffer.clone());
                 }
               });
             }
@@ -182,10 +185,7 @@ impl Window for ButtonEditor {
 
               ui.heading("info");
 
-              ui.horizontal(|ui| {
-                ui.label("track");
-                ui.add(DragValue::new(track));
-              });
+              channel_selector(track, ui);
 
               ui.horizontal(|ui| {
                 ui.label("effect");
@@ -215,10 +215,7 @@ impl Window for ButtonEditor {
 
               ui.heading("info");
 
-              ui.horizontal(|ui| {
-                ui.label("track");
-                ui.add(DragValue::new(track));
-              });
+              channel_selector(track, ui);
 
               ui.horizontal(|ui| {
                 ui.label("effect");
@@ -263,10 +260,7 @@ impl Window for ButtonEditor {
             } => {
               ui.heading("info");
 
-              ui.horizontal(|ui| {
-                ui.label("track");
-                ui.add(DragValue::new(track));
-              });
+              channel_selector(track, ui);
 
               ui.horizontal(|ui| {
                 ui.label("pitch");
