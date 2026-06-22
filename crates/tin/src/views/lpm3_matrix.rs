@@ -92,13 +92,13 @@ impl ViewLPM3Matrix {
                   } => {
                     let state = *tin
                       .toggle_button_states
-                      .get(&(song_id.clone(), *by, *bx))
+                      .get(&(song_id.clone(), *bx, *by))
                       .ok_or(anyhow::Error::msg(
                         "couldn't find button in toggle state map",
                       ))?;
                     tin
                       .toggle_button_states
-                      .insert((song_id.clone(), *by, *bx), !state);
+                      .insert((song_id.clone(), *bx, *by), !state);
                     for c in channels {
                       RenoiseCommunicator::send_message(
                         server,
@@ -116,13 +116,13 @@ impl ViewLPM3Matrix {
                   } => {
                     let state = *tin
                       .toggle_button_states
-                      .get(&(song_id.clone(), *by, *bx))
+                      .get(&(song_id.clone(), *bx, *by))
                       .ok_or(anyhow::Error::msg(
                         "couldn't find button in toggle state map",
                       ))?;
                     tin
                       .toggle_button_states
-                      .insert((song_id.clone(), *by, *bx), !state);
+                      .insert((song_id.clone(), *bx, *by), !state);
                     for (t, p) in track_patterns {
                       RenoiseCommunicator::send_message(
                         server,
@@ -141,13 +141,13 @@ impl ViewLPM3Matrix {
                   } => {
                     let state = *tin
                       .toggle_button_states
-                      .get(&(song_id.clone(), *by, *bx))
+                      .get(&(song_id.clone(), *bx, *by))
                       .ok_or(anyhow::Error::msg(
                         "couldn't find button in toggle state map",
                       ))?;
                     tin
                       .toggle_button_states
-                      .insert((song_id.clone(), *by, *bx), !state);
+                      .insert((song_id.clone(), *bx, *by), !state);
                     RenoiseCommunicator::send_message(
                       server,
                       rsa.clone(),
@@ -167,14 +167,14 @@ impl ViewLPM3Matrix {
                   } => {
                     let state = *tin
                       .cycle_button_states
-                      .get(&(song_id.clone(), *by, *bx))
+                      .get(&(song_id.clone(), *bx, *by))
                       .ok_or(anyhow::Error::msg(
                         "couldn't find button in toggle state map",
                       ))?;
                     let next_state = (state + 1) % cycles.len();
                     tin
                       .cycle_button_states
-                      .insert((song_id.clone(), *by, *bx), next_state);
+                      .insert((song_id.clone(), *bx, *by), next_state);
                     RenoiseCommunicator::send_message(
                       server,
                       rsa.clone(),
@@ -269,7 +269,7 @@ impl ViewLPM3Matrix {
             } => {
               let state = tin
                 .toggle_button_states
-                .get(&(song_id.clone(), *by, *bx))
+                .get(&(song_id.clone(), *bx, *by))
                 .ok_or(anyhow::Error::msg(
                   "couldn't find button in toggle state map",
                 ))?;
@@ -288,7 +288,7 @@ impl ViewLPM3Matrix {
             } => {
               let state = tin
                 .toggle_button_states
-                .get(&(song_id.clone(), *by, *bx))
+                .get(&(song_id.clone(), *bx, *by))
                 .ok_or(anyhow::Error::msg(
                   "couldn't find button in toggle state map",
                 ))?;
@@ -308,7 +308,7 @@ impl ViewLPM3Matrix {
             } => {
               let state = tin
                 .toggle_button_states
-                .get(&(song_id.clone(), *by, *bx))
+                .get(&(song_id.clone(), *bx, *by))
                 .ok_or(anyhow::Error::msg(
                   "couldn't find button in toggle state map",
                 ))?;
@@ -328,7 +328,7 @@ impl ViewLPM3Matrix {
             } => {
               let state = *tin
                 .cycle_button_states
-                .get(&(song_id.clone(), *by, *bx))
+                .get(&(song_id.clone(), *bx, *by))
                 .ok_or(anyhow::Error::msg(
                   "couldn't find button in toggle state map",
                 ))?;

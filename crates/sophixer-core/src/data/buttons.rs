@@ -99,6 +99,62 @@ impl SongButtonAction {
     }
   }
 
+  pub fn get_default_color(&self) -> [u8; 3] {
+    match self {
+      Self::CycleEffectParameterValue {
+        track: _,
+        effect: _,
+        param: _,
+        default,
+        cycles,
+      } => cycles.get(*default).map(|f| f.color).unwrap_or([0, 0, 0]),
+      Self::PlaySample {
+        track: _,
+        pitch: _,
+        volume: _,
+        sample: _,
+        color,
+      } => *color,
+      Self::ToggleChannels {
+        channels: _,
+        default,
+        color_off,
+        color_on,
+      } => {
+        if *default {
+          *color_on
+        } else {
+          *color_off
+        }
+      }
+      Self::ToggleEffectBypass {
+        track: _,
+        effect: _,
+        default,
+        color_off,
+        color_on,
+      } => {
+        if *default {
+          *color_on
+        } else {
+          *color_off
+        }
+      }
+      Self::ToggleTrackPatterns {
+        track_patterns: _,
+        default,
+        color_off,
+        color_on,
+      } => {
+        if *default {
+          *color_on
+        } else {
+          *color_off
+        }
+      }
+    }
+  }
+
   pub fn default_toggle_channels() -> Result<SongButtonAction> {
     Ok(SongButtonAction::ToggleChannels {
       channels: HashSet::new(),

@@ -888,6 +888,7 @@ dependencies = [
  "rfd",
  "ron",
  "sophixer-core",
+ "tin-drivers-midi",
 ]
 
 [[package]]

@@ -3,6 +3,10 @@ use sophixer_core::data::{
   Song, SongPattern,
   buttons::{SongButton, SongButtonAction},
 };
+use tin_drivers_midi::{
+  MidiDriver,
+  devices::launchpad_mini_mk3::{LPM3Position, LPM3Visual},
+};
 
 use crate::windows::{Window, button_editor::ButtonEditor, pattern_editor::PatternEditor};
 
@@ -44,6 +48,37 @@ impl<'a> Window for SongEditor {
       }
 
       if let Some(song) = set.songs.get_mut(&self.song_id) {
+        if let Some(driver) = &mut model.lpm3driver {
+          if ui.button("preview on lpm3").clicked() {
+            driver.clear()?;
+
+            for (i, p) in &song.patterns {
+              if *i >= 1 && *i <= 8 {
+                driver.add(LPM3Visual::RGB(
+                  LPM3Position::Grid(9, *i as u8),
+                  p.color[0],
+                  p.color[1],
+                  p.color[2],
+                ))?;
+              }
+            }
+
+            for ((x, y), b) in &song.buttons {
+              if *x >= 1 && *x <= 8 && *y >= 1 && *y <= 8 {
+                let color = b.action.get_default_color();
+                driver.add(LPM3Visual::RGB(
+                  LPM3Position::Grid(*x as u8, *y as u8),
+                  color[0],
+                  color[1],
+                  color[2],
+                ))?;
+              }
+            }
+
+            driver.push()?;
+          }
+        }
+
         ui.heading("info");
 
         ui.horizontal(|ui| {

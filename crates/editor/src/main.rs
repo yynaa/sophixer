@@ -7,7 +7,8 @@ use std::{
 };
 
 use eframe::egui::{self};
-use sophixer_core::data::Set;
+use sophixer_core::data::{Set, Song};
+use tin_drivers_midi::{MidiDriver, devices::launchpad_mini_mk3::LPM3Driver};
 
 use crate::windows::{Window, set_editor::SetEditor, song_editor::SongEditor, song_new::SongNew};
 
@@ -41,11 +42,15 @@ struct App {
 
 pub struct Model {
   set: Option<Set>,
+  lpm3driver: Option<LPM3Driver>,
 }
 
 impl Default for Model {
   fn default() -> Self {
-    Self { set: None }
+    Self {
+      set: None,
+      lpm3driver: None,
+    }
   }
 }
 
@@ -60,8 +65,25 @@ impl Default for App {
 }
 
 impl eframe::App for App {
+  fn on_exit(&mut self) {
+    if let Some(driver) = &mut self.model.lpm3driver {
+      driver.close().unwrap();
+    }
+  }
+
   fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
     egui::CentralPanel::default().show_inside(ui, |ui| {
+      if let Some(driver) = &mut self.model.lpm3driver {
+        if ui.button("Close LPM3").clicked() {
+          driver.close().unwrap();
+          self.model.lpm3driver = None;
+        }
+      } else {
+        if ui.button("Connect LPM3").clicked() {
+          self.model.lpm3driver = Some(LPM3Driver::connect().unwrap());
+        }
+      }
+
       if ui.button("New set").clicked() {
         if let Some(path) = rfd::FileDialog::new().save_file() {
           self.model.set = Some(Set::new(String::new(), String::new(), String::new()).unwrap());
@@ -97,7 +119,15 @@ impl eframe::App for App {
           }
 
           ui.label("songs:");
-          for (song_id, song) in &set.songs {
+
+          let mut songs_sorted = set
+            .songs
+            .iter()
+            .map(|(id, s)| (id.clone(), s.order, s))
+            .collect::<Vec<(String, i64, &Song)>>();
+          songs_sorted.sort_by(|a, b| a.1.cmp(&b.1));
+
+          for (song_id, _order, song) in &songs_sorted {
             if ui.button(song_id.clone()).clicked() {
               self
                 .windows
