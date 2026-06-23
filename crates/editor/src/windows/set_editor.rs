@@ -1,3 +1,5 @@
+use eframe::egui::DragValue;
+
 use crate::windows::Window;
 
 pub struct SetEditor {}
@@ -31,8 +33,8 @@ impl Window for SetEditor {
         });
 
         ui.horizontal(|ui| {
-          ui.label(".xrns path");
-          ui.text_edit_singleline(&mut set.xrns_path);
+          ui.label("break sequence position");
+          ui.add(DragValue::new(&mut set.stop_seq_pos));
         });
       }
     }

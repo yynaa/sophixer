@@ -6,7 +6,7 @@ use crate::{
 };
 use anyhow::Result;
 use intercom::server::{InterServerCommunicator, udp::UdpServer};
-use sophixer_core::data::buttons::ActionDescriptor;
+use sophixer_core::{data::buttons::ActionDescriptor, messages::renoise::MessageToRenoise};
 use tin_drivers_midi::{
   MidiDriver,
   devices::launchpad_mini_mk3::{LPM3Driver, LPM3InputMessage, LPM3Position, LPM3Visual},
@@ -67,6 +67,20 @@ impl ViewLPM3SongList {
                 for m in messages {
                   RenoiseCommunicator::send_message(server, rsa, m)?;
                 }
+              }
+            }
+
+            for x in 1..=15 {
+              for y in 2..=3 {
+                let mut v = 0.5;
+                if (x <= 7 || x == 15) && y == 3 {
+                  v = 1.0;
+                }
+                RenoiseCommunicator::send_message(
+                  server,
+                  rsa,
+                  MessageToRenoise::SetParameterValue(x, y, 1, v),
+                )?
               }
             }
           }

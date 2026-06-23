@@ -7,6 +7,7 @@ mod views;
 
 use crate::model::{LPM3View, TinModel};
 use crate::servers::renoise::RenoiseCommunicator;
+use crate::views::lcxl2_control::ViewLCXL2Control;
 use crate::views::lpm3_matrix::ViewLPM3Matrix;
 use crate::views::lpm3_songlist::ViewLPM3SongList;
 use anyhow::Result;
@@ -18,6 +19,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 use tin_drivers_midi::MidiDriver;
+use tin_drivers_midi::devices::launch_control_xl_mk2::LCXL2Driver;
 use tin_drivers_midi::devices::launchpad_mini_mk3::LPM3Driver;
 
 fn main() -> Result<()> {
@@ -47,11 +49,13 @@ fn main() -> Result<()> {
   })?;
 
   let mut lpm3driver = LPM3Driver::connect()?;
+  let mut lcxl2driver = LCXL2Driver::connect()?;
 
   let mut server = UdpServer::start("0.0.0.0:3000")?;
 
   let mut view_lpm3_songlist = ViewLPM3SongList::new(&tin);
   let mut view_lpm3_matrix = ViewLPM3Matrix::new();
+  let mut view_lcxl2_control = ViewLCXL2Control::new(&tin);
 
   let mut instant = Instant::now();
 
@@ -64,6 +68,7 @@ fn main() -> Result<()> {
     RenoiseCommunicator::update_model(&mut tin, &server)?;
 
     let lpm3_inputs = lpm3driver.read()?;
+    let lcxl2_inputs = lcxl2driver.read()?;
 
     match &tin.lpm3view {
       LPM3View::Matrix => {
@@ -85,8 +90,16 @@ fn main() -> Result<()> {
         )?;
       }
     }
+    view_lcxl2_control.update(
+      &delta_time,
+      &mut tin,
+      &mut lcxl2driver,
+      lcxl2_inputs.clone(),
+      &server,
+    )?;
 
     lpm3driver.clear()?;
+    lcxl2driver.clear()?;
 
     match &tin.lpm3view {
       LPM3View::Matrix => {
@@ -96,13 +109,16 @@ fn main() -> Result<()> {
         view_lpm3_songlist.draw(&tin, &mut lpm3driver)?;
       }
     }
+    view_lcxl2_control.draw(&tin, &mut lcxl2driver)?;
 
     lpm3driver.push()?;
+    lcxl2driver.push()?;
 
     instant = current_time;
   }
 
   lpm3driver.close()?;
+  lcxl2driver.close()?;
 
   Ok(())
 }

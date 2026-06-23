@@ -22,7 +22,7 @@ pub struct ButtonEditor {
 }
 
 impl ButtonEditor {
-  pub fn new(song_id: String, pos: (i64, i64), button: &SongButton) -> Self {
+  pub fn new(song_id: String, pos: (i64, i64), _button: &SongButton) -> Self {
     Self {
       song_id,
       pos,

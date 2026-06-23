@@ -1,7 +1,7 @@
+use crate::devices::launch_control_xl_mk2::LCXL2Position;
 use crate::devices::launch_control_xl_mk2::input::LCXL2InputMessage;
 use crate::devices::launch_control_xl_mk2::output::LCXL2OutputMessage;
 use crate::devices::launch_control_xl_mk2::visual::LCXL2Visual;
-use crate::devices::launch_control_xl_mk2::LCXL2Position;
 use crate::devices::{get_in_port, get_out_port};
 use crate::{
   MidiDriver, MidiDriverError, MidiInputMessage, MidiOutputMessage, MidiPhysicalPosition,
@@ -178,7 +178,7 @@ impl MidiDriver<LCXL2InputMessage, LCXL2OutputMessage, LCXL2Visual, LCXL2Positio
 
   fn clear(&mut self) -> Result<(), MidiDriverError> {
     self.pop();
-    for r in 1..48 {
+    for r in 0..48 {
       self.add(LCXL2Visual::Off(LCXL2Position::Raw(r)))?;
     }
     Ok(())

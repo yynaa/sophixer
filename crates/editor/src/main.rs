@@ -87,7 +87,7 @@ impl eframe::App for App {
 
       if ui.button("New set").clicked() {
         if let Some(path) = rfd::FileDialog::new().save_file() {
-          self.model.set = Some(Set::new(String::new(), String::new(), String::new()).unwrap());
+          self.model.set = Some(Set::new(String::new(), String::new()).unwrap());
           self.set_file = Some(path.to_string_lossy().to_string());
         }
       }

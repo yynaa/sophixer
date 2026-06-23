@@ -1,5 +1,5 @@
-use crate::devices::launch_control_xl_mk2::LCXL2Position;
 use crate::MidiInputMessage;
+use crate::devices::launch_control_xl_mk2::LCXL2Position;
 
 #[derive(Debug, Clone)]
 pub enum LCXL2InputMessage {
@@ -27,6 +27,16 @@ impl MidiInputMessage for LCXL2InputMessage {
       } else {
         None
       }
+    } else {
+      None
+    }
+  }
+}
+
+impl LCXL2InputMessage {
+  pub fn has_analog_moved(&self, key: LCXL2Position) -> Option<&u8> {
+    if let Self::Analog(k, v) = self {
+      if *k == key { Some(v) } else { None }
     } else {
       None
     }

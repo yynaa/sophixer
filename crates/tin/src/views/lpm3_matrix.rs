@@ -85,6 +85,18 @@ impl ViewLPM3Matrix {
               RenoiseCommunicator::send_message(server, rsa, MessageToRenoise::StopTransport)?;
             }
           } else {
+            if i == LPM3InputMessage::KeyPressed(LPM3Position::Grid(2, 8)) {
+              RenoiseCommunicator::send_message(
+                server,
+                rsa,
+                MessageToRenoise::PlaySection(tin.set.stop_seq_pos, false),
+              )?;
+              RenoiseCommunicator::send_message(
+                server,
+                rsa,
+                MessageToRenoise::SetLoop(tin.set.stop_seq_pos, tin.set.stop_seq_pos),
+              )?;
+            }
           }
 
           // patterns
@@ -182,6 +194,8 @@ impl ViewLPM3Matrix {
         } else {
           // instaplay
           lpm3.add(LPM3Visual::Static(LPM3Position::Grid(1, 8), 69))?;
+          // go to break
+          lpm3.add(LPM3Visual::Static(LPM3Position::Grid(2, 8), 1))?;
         }
       }
 

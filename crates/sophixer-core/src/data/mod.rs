@@ -43,16 +43,16 @@ impl Song {
 pub struct Set {
   pub name: String,
   pub authors: String,
-  pub xrns_path: String,
+  pub stop_seq_pos: u64,
   pub songs: HashMap<String, Song>,
 }
 
 impl Set {
-  pub fn new(name: String, authors: String, xrns_path: String) -> Result<Set> {
+  pub fn new(name: String, authors: String) -> Result<Set> {
     Ok(Set {
       name,
       authors,
-      xrns_path,
+      stop_seq_pos: 0,
       songs: HashMap::new(),
     })
   }
