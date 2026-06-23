@@ -11,5 +11,9 @@ Sophixer is composed of various crates/plugins:
 ## Index
 
 - [Setting up Sophixer](SETUP.md)
-- [Technicals](technical/)
+- Views
+  - Launchpad Mini MK3
+    - [Songlist (bound to Session)](views/lpm3/SONGLIST.md)
+    - [Matrix (bound to Keys)](views/lpm3/MATRIX.md)
+- Technicals
   - [intercom](technical/INTERCOM.md)
