@@ -17,6 +17,7 @@ pub struct TinModel {
   pub renoise_socket: Option<SocketAddr>,
   pub current_song: Option<String>,
 
+  pub bpm: f64,
   pub button_states: HashMap<(String, i64, i64), SongButtonActionValue>,
 }
 
@@ -35,6 +36,7 @@ impl TinModel {
       lpm3view: LPM3View::SongList,
       renoise_socket: None,
       current_song: None,
+      bpm: 125.,
       button_states,
     }
   }

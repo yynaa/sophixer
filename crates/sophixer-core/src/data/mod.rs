@@ -21,6 +21,7 @@ pub struct Song {
   pub authors: String,
   pub order: i64,
   pub color: [u8; 3],
+  pub bpm: f64,
   pub patterns: HashMap<i64, SongPattern>,
   /// tuple represents x,y
   pub buttons: HashMap<(i64, i64), SongButton>,
@@ -33,6 +34,7 @@ impl Song {
       authors,
       order: 0,
       color: [255, 255, 255],
+      bpm: 125.,
       patterns: HashMap::new(),
       buttons: HashMap::new(),
     })

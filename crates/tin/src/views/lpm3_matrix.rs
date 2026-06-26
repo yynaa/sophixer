@@ -97,6 +97,10 @@ impl ViewLPM3Matrix {
                 MessageToRenoise::SetLoop(tin.set.stop_seq_pos, tin.set.stop_seq_pos),
               )?;
             }
+            if i == LPM3InputMessage::KeyPressed(LPM3Position::Grid(3, 8)) {
+              tin.bpm = song.bpm;
+              RenoiseCommunicator::send_message(server, rsa, MessageToRenoise::SetBPM(tin.bpm))?;
+            }
           }
 
           // patterns
@@ -196,6 +200,8 @@ impl ViewLPM3Matrix {
           lpm3.add(LPM3Visual::Static(LPM3Position::Grid(1, 8), 69))?;
           // go to break
           lpm3.add(LPM3Visual::Static(LPM3Position::Grid(2, 8), 1))?;
+          // sync bpm
+          lpm3.add(LPM3Visual::Flashing(LPM3Position::Grid(3, 8), 5, 21))?;
         }
       }
 

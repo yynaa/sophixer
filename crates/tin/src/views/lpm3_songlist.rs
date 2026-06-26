@@ -8,13 +8,15 @@ use anyhow::Result;
 use intercom::server::{InterServerCommunicator, udp::UdpServer};
 use sophixer_core::{data::buttons::ActionDescriptor, messages::renoise::MessageToRenoise};
 use tin_drivers_midi::{
-  MidiDriver,
+  MidiDriver, MidiPhysicalState,
   devices::launchpad_mini_mk3::{LPM3Driver, LPM3InputMessage, LPM3Position, LPM3Visual},
 };
 
 pub struct ViewLPM3SongList {
   cached_song_list: Vec<String>,
+
   control: bool,
+  print_song: bool,
 }
 
 impl ViewLPM3SongList {
@@ -31,6 +33,7 @@ impl ViewLPM3SongList {
     Self {
       cached_song_list,
       control: false,
+      print_song: false,
     }
   }
 
@@ -38,7 +41,7 @@ impl ViewLPM3SongList {
     &mut self,
     _dt: &Duration,
     tin: &mut TinModel,
-    _lpm3: &mut LPM3Driver,
+    lpm3: &mut LPM3Driver,
     lpm3_inputs: VecDeque<LPM3InputMessage>,
     server: &UdpServer,
   ) -> Result<()> {
@@ -47,11 +50,11 @@ impl ViewLPM3SongList {
         tin.lpm3view = LPM3View::Matrix;
       }
 
-      if i == LPM3InputMessage::KeyPressed(LPM3Position::SSM) {
-        self.control = true;
+      if let MidiPhysicalState::Binary(b) = lpm3.get_position_state(LPM3Position::SSM)? {
+        self.control = b;
       }
-      if i == LPM3InputMessage::KeyReleased(LPM3Position::SSM) {
-        self.control = false;
+      if let MidiPhysicalState::Binary(b) = lpm3.get_position_state(LPM3Position::Grid(1, 8))? {
+        self.print_song = b && !self.control;
       }
 
       if let Some(rsa) = tin.renoise_socket {
@@ -93,8 +96,17 @@ impl ViewLPM3SongList {
           let x = (p % 8) + 1;
           let y = p / 8 + 1;
           if y < 8 && i == LPM3InputMessage::KeyPressed(LPM3Position::Grid(x as u8, y as u8)) {
-            tin.current_song = Some(song_id.clone());
-            info!("loaded song {}", song_id);
+            if self.print_song {
+              if let Some(song) = tin.set.songs.get(song_id) {
+                info!(
+                  "selected song: {} by {} - BPM: {}",
+                  song.name, song.authors, song.bpm
+                );
+              }
+            } else {
+              tin.current_song = Some(song_id.clone());
+              info!("loaded song {}", song_id);
+            }
           }
         }
       }

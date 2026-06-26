@@ -153,6 +153,11 @@ impl ViewLCXL2Control {
             ),
           )?;
         }
+
+        if let Some(v) = i.has_analog_moved(LCXL2Position::Knob(8, 2)) {
+          let bpm = tin.bpm + (*v as i64 - 64) as f64 * 0.5;
+          RenoiseCommunicator::send_message(server, rsa, MessageToRenoise::SetBPM(bpm))?;
+        }
       }
     }
 
@@ -170,6 +175,7 @@ impl ViewLCXL2Control {
       for x in 1..=8 {
         lcxl2.add(LCXL2Visual::Static(LCXL2Position::Knob(x, 3), 0, 3))?;
       }
+      lcxl2.add(LCXL2Visual::Static(LCXL2Position::Knob(8, 2), 1, 3))?;
     }
 
     Ok(())
