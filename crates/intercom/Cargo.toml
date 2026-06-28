@@ -11,3 +11,9 @@ version.workspace = true
 [dependencies]
 thiserror = { workspace = true }
 log = { workspace = true }
+tokio = { version = "1.52", features = ["net", "rt", "macros", "time"] }
+serde = { version = "1.0", features = ["derive"]}
+serde-value = { version = "0.7" }
+serde_json = { version = "1.0" }
+async-trait = { version = "0.1" }
+env_logger = { version = "0.11" }

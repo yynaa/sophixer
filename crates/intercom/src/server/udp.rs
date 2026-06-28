@@ -1,155 +1,92 @@
-use crate::server::InterServer;
-use crate::InterError;
-use log::{error, warn};
-use std::collections::{HashMap, VecDeque};
-use std::net::{SocketAddr, UdpSocket};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{mpsc, Arc};
-use std::thread;
-use std::thread::JoinHandle;
+use std::{
+  collections::{HashMap, VecDeque},
+  io::ErrorKind::WouldBlock,
+  net::SocketAddr,
+};
 
-type InternalSignal = (SocketAddr, String);
+use serde_value::Value;
+use tokio::net::UdpSocket;
+
+use crate::{InterError, PrefixedMessage, server::InterServer};
 
 pub struct UdpServer {
-  stop_flag: Arc<AtomicBool>,
+  sock: UdpSocket,
 
-  handle_reader: JoinHandle<()>,
-  handle_sender: JoinHandle<()>,
-
-  rx_reader: mpsc::Receiver<InternalSignal>,
-  tx_sender: mpsc::Sender<InternalSignal>,
-
-  messages: HashMap<String, VecDeque<(SocketAddr, String)>>,
+  messages: HashMap<String, VecDeque<(SocketAddr, Value)>>,
 }
 
-fn udp_reader(socket: UdpSocket, tx: mpsc::Sender<InternalSignal>, stop_flag: Arc<AtomicBool>) {
-  let mut buf = [0; 1024];
-  while !stop_flag.load(Ordering::Relaxed) {
-    match socket.recv_from(&mut buf) {
-      Ok((len, src)) => {
-        let msg = String::from_utf8_lossy(&buf[..len]).to_string();
-        match tx.send((src, msg)) {
-          Ok(()) => {}
-          Err(e) => {
-            error!("mpsc send error: {e:?}");
-          }
-        }
-      }
-      Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
-      Err(e) => {
-        error!("udp error: {e:?}");
-      }
-    }
-  }
-}
-
-fn udp_sender(socket: UdpSocket, rx: mpsc::Receiver<InternalSignal>, stop_flag: Arc<AtomicBool>) {
-  while !stop_flag.load(Ordering::Relaxed) {
-    match rx.try_recv() {
-      Ok(v) => {
-        let (addr, msg) = v;
-        match socket.send_to(msg.as_bytes(), addr) {
-          Ok(_) => {}
-          Err(e) => {
-            error!("couldn't send message on socket: {e:?}");
-          }
-        }
-      }
-      Err(mpsc::TryRecvError::Empty) => {}
-      Err(mpsc::TryRecvError::Disconnected) => {
-        break;
-      }
-    }
-  }
-}
-
+#[async_trait::async_trait]
 impl InterServer for UdpServer {
-  fn start(addr: &str) -> Result<Self, InterError> {
-    let socket = UdpSocket::bind(addr).map_err(InterError::IOError)?;
-    socket.set_nonblocking(true).map_err(InterError::IOError)?;
+  async fn start(addr: &str) -> Result<Self, InterError> {
+    let sock = UdpSocket::bind(addr).await?;
 
-    let stop_flag = Arc::new(AtomicBool::new(false));
+    trace!("udp server started");
 
-    let socket_reader = socket.try_clone().map_err(InterError::IOError)?;
-    let (tx_reader, rx_reader) = mpsc::channel::<InternalSignal>();
-    let stop_flag_reader = Arc::clone(&stop_flag);
-    let handle_reader =
-      thread::spawn(move || udp_reader(socket_reader, tx_reader, stop_flag_reader));
-
-    let socket_sender = socket.try_clone().map_err(InterError::IOError)?;
-    let (tx_sender, rx_sender) = mpsc::channel::<InternalSignal>();
-    let stop_flag_sender = Arc::clone(&stop_flag);
-    let handle_sender =
-      thread::spawn(move || udp_sender(socket_sender, rx_sender, stop_flag_sender));
-
-    let udp = Self {
-      stop_flag,
-
-      handle_reader,
-      handle_sender,
-
-      rx_reader,
-      tx_sender,
-
+    Ok(Self {
+      sock,
       messages: HashMap::new(),
-    };
-
-    Ok(udp)
+    })
   }
 
-  fn stop(self) -> Result<(), InterError> {
-    self.stop_flag.store(true, Ordering::Relaxed);
-
-    self
-      .handle_reader
-      .join()
-      .map_err(|e| InterError::ThreadError(format!("{:?}", e)))?;
-    self
-      .handle_sender
-      .join()
-      .map_err(|e| InterError::ThreadError(format!("{:?}", e)))?;
-
+  async fn stop(self) -> Result<(), InterError> {
+    //nothing to do, just drop
     Ok(())
   }
 
-  fn send(&self, addr: SocketAddr, msg: String) -> Result<(), InterError> {
-    self
-      .tx_sender
-      .send((addr, msg))
-      .map_err(|e| InterError::MPSCSendError(format!("{e:?}")))
-  }
-
-  fn fetch(&mut self) -> Result<(), InterError> {
+  /// this udp implementation expects JSON messages of this format:
+  /// ```json
+  /// {
+  ///   "message_type": "x",
+  ///   "message": {...}
+  /// }
+  /// ```
+  async fn fetch(&mut self) -> Result<(), InterError> {
+    trace!("fetching messages");
     self.messages.clear();
+    let mut buf = [0; 1024];
     loop {
-      match self.rx_reader.try_recv() {
-        Ok((addr, msg)) => match msg.split_once(":") {
-          Some((msg_prefix, msg_content)) => {
-            let msg_prefix_key = msg_prefix.to_string();
-            if !self.messages.contains_key(&msg_prefix_key) {
+      match self.sock.try_recv_from(&mut buf) {
+        Ok((len, addr)) => {
+          let msg = String::from_utf8_lossy(&buf[..len]).to_string();
+          if let Ok(wrapped) = serde_json::from_str::<PrefixedMessage>(&msg) {
+            if !self.messages.contains_key(&wrapped.prefix) {
+              trace!("created unexistant prefix storage {}", wrapped.prefix);
               self
                 .messages
-                .insert(msg_prefix_key.clone(), VecDeque::new());
+                .insert(wrapped.prefix.clone(), VecDeque::new());
             }
+            trace!("found {:?}", wrapped);
             self
               .messages
-              .get_mut(&msg_prefix_key)
+              .get_mut(&wrapped.prefix)
               .unwrap()
-              .push_back((addr, msg_content[..msg_content.len() - 1].to_string()))
+              .push_back((addr, wrapped.message));
+          } else {
+            warn!("couldn't read the following message: {}", msg);
           }
-          None => {
-            warn!("invalid message received: contained no prefix");
+        }
+        Err(e) => {
+          if e.kind() == WouldBlock {
+            trace!("no more messages");
+            break;
+          } else {
+            warn!("unexpected error! {}", e);
+            break;
           }
-        },
-        Err(_) => {
-          break;
         }
       }
     }
     Ok(())
   }
 
-  fn get(&self, prefix: String) -> Option<&VecDeque<(SocketAddr, String)>> {
+  fn get(&self, prefix: String) -> Option<&VecDeque<(SocketAddr, Value)>> {
+    trace!("got messages");
     self.messages.get(&prefix)
+  }
+
+  async fn send(&self, addr: SocketAddr, msg: String) -> Result<(), InterError> {
+    trace!("sent to {}: {}", addr, msg);
+    self.sock.send_to(&msg.into_bytes(), addr).await?;
+    Ok(())
   }
 }

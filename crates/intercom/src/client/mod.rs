@@ -1,44 +1,61 @@
 pub mod udp;
 
 use log::warn;
-use std::collections::VecDeque;
+use serde_value::{Value, to_value};
+use std::{collections::VecDeque, marker::PhantomData};
 
-use crate::{InterError, InterMessageIncoming, InterMessageOutgoing, InterMessagePrefixed};
+use crate::{
+  InterError, InterMessageIncoming, InterMessageOutgoing, InterMessagePrefixed, PrefixedMessage,
+};
 
+#[async_trait::async_trait]
 pub trait InterClient: Sized {
-  fn start(addr: &str) -> Result<Self, InterError>;
-  fn stop(self) -> Result<(), InterError>;
-  fn send(&self, msg: String) -> Result<(), InterError>;
-  fn fetch(&mut self) -> Result<(), InterError>;
-  fn get(&self) -> Option<&VecDeque<String>>;
+  async fn start(addr: &str) -> Result<Self, InterError>;
+  async fn stop(self) -> Result<(), InterError>;
+  async fn send(&self, msg: String) -> Result<(), InterError>;
+  async fn fetch(&mut self) -> Result<(), InterError>;
+  fn get(&self) -> Option<&VecDeque<Value>>;
 }
 
-pub trait InterClientCommunicator<
+pub struct InterClientCommunicator<'de, C, I, O>
+where
   C: InterClient,
-  I: InterMessageIncoming,
+  I: InterMessageIncoming<'de>,
   O: InterMessageOutgoing + InterMessagePrefixed,
->
 {
-  fn get_messages(client: &C) -> Option<VecDeque<I>> {
+  c: PhantomData<C>,
+  i: PhantomData<&'de I>,
+  o: PhantomData<O>,
+}
+
+impl<
+  'de,
+  C: InterClient,
+  I: InterMessageIncoming<'de>,
+  O: InterMessageOutgoing + InterMessagePrefixed,
+> InterClientCommunicator<'de, C, I, O>
+{
+  pub fn get_messages(client: &C) -> Option<VecDeque<I>> {
     client.get().map(|deque| {
       let mut deque_clone = deque.clone();
       let mut r = VecDeque::new();
-      while let Some(msg_string) = deque_clone.pop_front() {
-        match I::from_raw(msg_string.split(",").collect()) {
-          None => {
-            warn!("unrecognized message from server: {msg_string:?}")
-          }
-          Some(msg) => {
-            r.push_back(msg);
-          }
+      while let Some(msg) = deque_clone.pop_front() {
+        if let Ok(msg) = msg.clone().deserialize_into::<I>() {
+          r.push_back(msg);
+        } else {
+          warn!("unrecognized message from server: {:?}", msg);
         }
       }
       r
     })
   }
-  fn send_message(client: &C, msg: O) -> Result<(), InterError> {
-    let msg_string = msg.to_raw()?;
-    client.send(O::get_prefix() + ":" + &msg_string + ";")?;
+  pub async fn send_message(client: &C, msg: O) -> Result<(), InterError> {
+    let prefixed = PrefixedMessage {
+      prefix: O::get_prefix(),
+      message: to_value(&msg)?,
+    };
+    let msg_string = serde_json::to_string(&prefixed)?;
+    client.send(msg_string).await?;
     Ok(())
   }
 }

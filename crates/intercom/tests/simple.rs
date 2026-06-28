@@ -2,17 +2,17 @@ use intercom::client::udp::UdpClient;
 use intercom::client::{InterClient, InterClientCommunicator};
 use intercom::server::udp::UdpServer;
 use intercom::server::{InterServer, InterServerCommunicator};
-use intercom::{InterError, InterMessageIncoming, InterMessageOutgoing, InterMessagePrefixed};
-use log::warn;
-use std::str::FromStr;
-use std::thread::sleep;
+use intercom::{InterMessageIncoming, InterMessageOutgoing, InterMessagePrefixed};
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
+use tokio::time::sleep;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 enum MessageFromClient {
   DoYouWorkProperly,
   AreYouBroken,
   EchoThis(u8),
+  EchoThese(u8, i64, u64),
 }
 
 impl InterMessagePrefixed for MessageFromClient {
@@ -21,101 +21,53 @@ impl InterMessagePrefixed for MessageFromClient {
   }
 }
 
-impl InterMessageIncoming for MessageFromClient {
-  fn from_raw(raw: Vec<&str>) -> Option<Self> {
-    match raw.len() {
-      1 => match raw.get(0).unwrap() {
-        &"doYouWorkProperly" => Some(Self::DoYouWorkProperly),
-        &"areYouBroken" => Some(Self::AreYouBroken),
-        _ => None,
-      },
-      2 => match raw.get(0).unwrap() {
-        &"echoThis" => match u8::from_str(raw.get(1).unwrap()) {
-          Ok(c) => Some(Self::EchoThis(c)),
-          Err(e) => {
-            warn!("couldn't parse parameter: {e:?}");
-            None
-          }
-        },
-        _ => None,
-      },
-      _ => None,
-    }
-  }
-}
+impl<'de> InterMessageIncoming<'de> for MessageFromClient {}
 
-impl InterMessageOutgoing for MessageFromClient {
-  fn to_raw(self) -> Result<String, InterError> {
-    match self {
-      Self::DoYouWorkProperly => Ok(String::from("doYouWorkProperly")),
-      Self::AreYouBroken => Ok(String::from("areYouBroken")),
-      Self::EchoThis(n) => Ok(format!("echoThis,{}", n)),
-    }
-  }
-}
+impl InterMessageOutgoing for MessageFromClient {}
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 enum MessageFromServer {
   Yes,
   No,
   Number(u8),
+  Numbers(u8, i64, u64),
 }
 
-impl InterMessageIncoming for MessageFromServer {
-  fn from_raw(raw: Vec<&str>) -> Option<Self> {
-    match raw.len() {
-      1 => match raw.get(0).unwrap() {
-        &"yes" => Some(Self::Yes),
-        &"no" => Some(Self::No),
-        _ => None,
-      },
-      2 => match raw.get(0).unwrap() {
-        &"number" => match u8::from_str(raw.get(1).unwrap()) {
-          Ok(c) => Some(Self::Number(c)),
-          Err(e) => {
-            warn!("couldn't parse parameter: {e:?}");
-            None
-          }
-        },
-        _ => None,
-      },
-      _ => None,
-    }
-  }
-}
+impl<'de> InterMessageIncoming<'de> for MessageFromServer {}
 
-impl InterMessageOutgoing for MessageFromServer {
-  fn to_raw(self) -> Result<String, InterError> {
-    Ok(match self {
-      Self::Yes => String::from("yes"),
-      Self::No => String::from("no"),
-      Self::Number(n) => format!("number,{n}"),
-    })
-  }
-}
+impl InterMessageOutgoing for MessageFromServer {}
 
-struct ServerCommunicator {}
-impl InterServerCommunicator<UdpServer, MessageFromClient, MessageFromServer>
-  for ServerCommunicator
-{
-}
+// struct ServerCommunicator {}
+// impl InterServerCommunicator<UdpServer, MessageFromClient, MessageFromServer>
+//   for ServerCommunicator
+// {
+// }
 
-struct ClientCommunicator {}
-impl InterClientCommunicator<UdpClient, MessageFromServer, MessageFromClient>
-  for ClientCommunicator
-{
-}
+// struct ClientCommunicator {}
+// impl InterClientCommunicator<UdpClient, MessageFromServer, MessageFromClient>
+//   for ClientCommunicator
+// {
+// }
 
-#[test]
-fn simple() {
-  let mut server = UdpServer::start("127.0.0.1:21435").unwrap();
-  let mut client = UdpClient::start("127.0.0.1:21435").unwrap();
+type ServerCommunicator<'de> =
+  InterServerCommunicator<'de, UdpServer, MessageFromClient, MessageFromServer>;
+type ClientCommunicator<'de> =
+  InterClientCommunicator<'de, UdpClient, MessageFromServer, MessageFromClient>;
+
+#[tokio::test]
+async fn simple() {
+  let _ = env_logger::builder().is_test(true).try_init();
+
+  let mut server = UdpServer::start("127.0.0.1:21435").await.unwrap();
+  let mut client = UdpClient::start("127.0.0.1:21435").await.unwrap();
 
   // do you work properly
   {
-    ClientCommunicator::send_message(&client, MessageFromClient::DoYouWorkProperly).unwrap();
-    sleep(Duration::from_millis(100));
-    server.fetch().unwrap();
+    ClientCommunicator::send_message(&client, MessageFromClient::DoYouWorkProperly)
+      .await
+      .unwrap();
+    sleep(Duration::from_millis(100)).await;
+    server.fetch().await.unwrap();
     let mut messages = ServerCommunicator::get_messages(&server).unwrap();
     let message = messages.pop_front().unwrap();
     if messages.pop_front().is_some() {
@@ -123,12 +75,14 @@ fn simple() {
     }
     match message.1 {
       MessageFromClient::DoYouWorkProperly => {
-        ServerCommunicator::send_message(&server, message.0, MessageFromServer::Yes).unwrap()
+        ServerCommunicator::send_message(&server, message.0, MessageFromServer::Yes)
+          .await
+          .unwrap()
       }
       _ => panic!("incorrect message"),
     }
-    sleep(Duration::from_millis(100));
-    client.fetch().unwrap();
+    sleep(Duration::from_millis(100)).await;
+    client.fetch().await.unwrap();
     let mut messages = ClientCommunicator::get_messages(&client).unwrap();
     let message = messages.pop_front().unwrap();
     if messages.pop_front().is_some() {
@@ -142,9 +96,11 @@ fn simple() {
 
   // are you broken
   {
-    ClientCommunicator::send_message(&client, MessageFromClient::AreYouBroken).unwrap();
-    sleep(Duration::from_millis(100));
-    server.fetch().unwrap();
+    ClientCommunicator::send_message(&client, MessageFromClient::AreYouBroken)
+      .await
+      .unwrap();
+    sleep(Duration::from_millis(100)).await;
+    server.fetch().await.unwrap();
     let mut messages = ServerCommunicator::get_messages(&server).unwrap();
     let message = messages.pop_front().unwrap();
     if messages.pop_front().is_some() {
@@ -152,12 +108,14 @@ fn simple() {
     }
     match message.1 {
       MessageFromClient::AreYouBroken => {
-        ServerCommunicator::send_message(&server, message.0, MessageFromServer::No).unwrap()
+        ServerCommunicator::send_message(&server, message.0, MessageFromServer::No)
+          .await
+          .unwrap()
       }
       _ => panic!("incorrect message"),
     }
-    sleep(Duration::from_millis(100));
-    client.fetch().unwrap();
+    sleep(Duration::from_millis(100)).await;
+    client.fetch().await.unwrap();
     let mut messages = ClientCommunicator::get_messages(&client).unwrap();
     let message = messages.pop_front().unwrap();
     if messages.pop_front().is_some() {
@@ -171,9 +129,11 @@ fn simple() {
 
   // // echo
   {
-    ClientCommunicator::send_message(&client, MessageFromClient::EchoThis(69)).unwrap();
-    sleep(Duration::from_millis(100));
-    server.fetch().unwrap();
+    ClientCommunicator::send_message(&client, MessageFromClient::EchoThis(69))
+      .await
+      .unwrap();
+    sleep(Duration::from_millis(100)).await;
+    server.fetch().await.unwrap();
     let mut messages = ServerCommunicator::get_messages(&server).unwrap();
     let message = messages.pop_front().unwrap();
     if messages.pop_front().is_some() {
@@ -182,19 +142,57 @@ fn simple() {
     match message.1 {
       MessageFromClient::EchoThis(n) => match n {
         69 => ServerCommunicator::send_message(&server, message.0, MessageFromServer::Number(69))
+          .await
           .unwrap(),
         _ => panic!("invalid number echoed back"),
       },
       _ => panic!("incorrect message"),
     }
-    sleep(Duration::from_millis(100));
-    client.fetch().unwrap();
+    sleep(Duration::from_millis(100)).await;
+    client.fetch().await.unwrap();
     let mut messages = ClientCommunicator::get_messages(&client).unwrap();
     let message = messages.pop_front().unwrap();
     if messages.pop_front().is_some() {
       panic!("found more than one message");
     }
     if let MessageFromServer::Number(69) = message {
+    } else {
+      panic!("incorrect message")
+    }
+  }
+
+  {
+    ClientCommunicator::send_message(&client, MessageFromClient::EchoThese(69, -12, 420))
+      .await
+      .unwrap();
+    sleep(Duration::from_millis(100)).await;
+    server.fetch().await.unwrap();
+    let mut messages = ServerCommunicator::get_messages(&server).unwrap();
+    let message = messages.pop_front().unwrap();
+    if messages.pop_front().is_some() {
+      panic!("found more than one message");
+    }
+    match message.1 {
+      MessageFromClient::EchoThese(a, b, c) => match (a, b, c) {
+        (69, -12, 420) => ServerCommunicator::send_message(
+          &server,
+          message.0,
+          MessageFromServer::Numbers(69, -12, 420),
+        )
+        .await
+        .unwrap(),
+        _ => panic!("invalid numbers echoed back"),
+      },
+      _ => panic!("incorrect message"),
+    }
+    sleep(Duration::from_millis(100)).await;
+    client.fetch().await.unwrap();
+    let mut messages = ClientCommunicator::get_messages(&client).unwrap();
+    let message = messages.pop_front().unwrap();
+    if messages.pop_front().is_some() {
+      panic!("found more than one message");
+    }
+    if let MessageFromServer::Numbers(69, -12, 420) = message {
     } else {
       panic!("incorrect message")
     }
