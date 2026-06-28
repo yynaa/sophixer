@@ -4,7 +4,7 @@ use anyhow::Result;
 use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
 
-use crate::messages::renoise::MessageToRenoise;
+use crate::messages::renoise::to::MessageToRenoise;
 
 pub mod cycle_effect_parameter_value;
 pub mod play_sample;

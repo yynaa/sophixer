@@ -1,6 +1,5 @@
 pub mod udp;
 
-use serde_value::Value;
 use std::{collections::VecDeque, marker::PhantomData, net::SocketAddr};
 
 use crate::{InterError, InterMessageIncoming, InterMessageOutgoing, InterMessagePrefixed};
@@ -9,28 +8,24 @@ use crate::{InterError, InterMessageIncoming, InterMessageOutgoing, InterMessage
 pub trait InterServer: Sized {
   async fn start(addr: &str) -> Result<Self, InterError>;
   async fn stop(self) -> Result<(), InterError>;
-  async fn send(&self, addr: SocketAddr, msg: String) -> Result<(), InterError>;
+  async fn send(&self, addr: SocketAddr, msg: &[u8]) -> Result<(), InterError>;
   async fn fetch(&mut self) -> Result<(), InterError>;
-  fn get(&self, prefix: String) -> Option<&VecDeque<(SocketAddr, Value)>>;
+  fn get(&self, prefix: u8) -> Option<&VecDeque<(SocketAddr, Vec<u8>)>>;
 }
 
-pub struct InterServerCommunicator<'de, S, I, O>
+pub struct InterServerCommunicator<S, I, O>
 where
   S: InterServer,
-  I: InterMessageIncoming<'de> + InterMessagePrefixed,
+  I: InterMessageIncoming + InterMessagePrefixed,
   O: InterMessageOutgoing,
 {
   s: PhantomData<S>,
-  i: PhantomData<&'de I>,
+  i: PhantomData<I>,
   o: PhantomData<O>,
 }
 
-impl<
-  'de,
-  S: InterServer,
-  I: InterMessageIncoming<'de> + InterMessagePrefixed,
-  O: InterMessageOutgoing,
-> InterServerCommunicator<'de, S, I, O>
+impl<'de, S: InterServer, I: InterMessageIncoming + InterMessagePrefixed, O: InterMessageOutgoing>
+  InterServerCommunicator<S, I, O>
 {
   pub fn get_messages(server: &S) -> Option<VecDeque<(SocketAddr, I)>> {
     server.get(I::get_prefix()).map(|deque| {
@@ -45,7 +40,7 @@ impl<
         //     r.push_back((addr, msg));
         //   }
         // }
-        if let Ok(msg) = msg.clone().deserialize_into::<I>() {
+        if let Some(msg) = I::deserialize(msg.clone()) {
           r.push_back((addr, msg));
         } else {
           warn!("unrecognized message from client {}: {:?}", addr, msg);
@@ -55,8 +50,8 @@ impl<
     })
   }
   pub async fn send_message(server: &S, addr: SocketAddr, msg: O) -> Result<(), InterError> {
-    let msg_string = serde_json::to_string(&msg)?;
-    server.send(addr, msg_string).await?;
+    let msg_string = msg.serialize().ok_or(InterError::NoSerialization)?;
+    server.send(addr, &msg_string).await?;
     Ok(())
   }
 }

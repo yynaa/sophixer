@@ -2,7 +2,7 @@ use intercom::client::udp::UdpClient;
 use intercom::client::{InterClient, InterClientCommunicator};
 use intercom::server::udp::UdpServer;
 use intercom::server::{InterServer, InterServerCommunicator};
-use intercom::{InterMessageIncoming, InterMessageOutgoing, InterMessagePrefixed};
+use intercom::{InterError, InterMessageIncoming, InterMessageOutgoing, InterMessagePrefixed};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tokio::time::sleep;
@@ -16,14 +16,22 @@ enum MessageFromClient {
 }
 
 impl InterMessagePrefixed for MessageFromClient {
-  fn get_prefix() -> String {
-    String::from("simple")
+  fn get_prefix() -> u8 {
+    1
   }
 }
 
-impl<'de> InterMessageIncoming<'de> for MessageFromClient {}
+impl InterMessageIncoming for MessageFromClient {
+  fn deserialize(bytes: Vec<u8>) -> Option<Self> {
+    serde_json::from_slice(&bytes).ok()
+  }
+}
 
-impl InterMessageOutgoing for MessageFromClient {}
+impl InterMessageOutgoing for MessageFromClient {
+  fn serialize(&self) -> Option<Vec<u8>> {
+    serde_json::to_vec(&self).ok()
+  }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 enum MessageFromServer {
@@ -33,9 +41,17 @@ enum MessageFromServer {
   Numbers(u8, i64, u64),
 }
 
-impl<'de> InterMessageIncoming<'de> for MessageFromServer {}
+impl InterMessageIncoming for MessageFromServer {
+  fn deserialize(bytes: Vec<u8>) -> Option<Self> {
+    serde_json::from_slice(&bytes).ok()
+  }
+}
 
-impl InterMessageOutgoing for MessageFromServer {}
+impl InterMessageOutgoing for MessageFromServer {
+  fn serialize(&self) -> Option<Vec<u8>> {
+    serde_json::to_vec(&self).ok()
+  }
+}
 
 // struct ServerCommunicator {}
 // impl InterServerCommunicator<UdpServer, MessageFromClient, MessageFromServer>
@@ -50,9 +66,9 @@ impl InterMessageOutgoing for MessageFromServer {}
 // }
 
 type ServerCommunicator<'de> =
-  InterServerCommunicator<'de, UdpServer, MessageFromClient, MessageFromServer>;
+  InterServerCommunicator<UdpServer, MessageFromClient, MessageFromServer>;
 type ClientCommunicator<'de> =
-  InterClientCommunicator<'de, UdpClient, MessageFromServer, MessageFromClient>;
+  InterClientCommunicator<UdpClient, MessageFromServer, MessageFromClient>;
 
 #[tokio::test]
 async fn simple() {

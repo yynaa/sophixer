@@ -4,7 +4,6 @@ use std::{
   net::{SocketAddr, ToSocketAddrs},
 };
 
-use serde_value::Value;
 use tokio::net::UdpSocket;
 
 use crate::{InterError, client::InterClient};
@@ -13,7 +12,7 @@ pub struct UdpClient {
   sock: UdpSocket,
   server_addr: SocketAddr,
 
-  messages: VecDeque<Value>,
+  messages: VecDeque<Vec<u8>>,
 }
 
 #[async_trait::async_trait]
@@ -46,13 +45,8 @@ impl InterClient for UdpClient {
     loop {
       match self.sock.try_recv_from(&mut buf) {
         Ok((len, _addr)) => {
-          let msg = String::from_utf8_lossy(&buf[..len]).to_string();
-          if let Ok(value) = serde_json::from_str::<Value>(&msg) {
-            trace!("found {:?}", value);
-            self.messages.push_back(value);
-          } else {
-            warn!("couldn't read the following message: {}", msg);
-          }
+          let msg = buf[..len].to_vec();
+          self.messages.push_back(msg);
         }
         Err(e) => {
           if e.kind() == WouldBlock {
@@ -68,7 +62,7 @@ impl InterClient for UdpClient {
     Ok(())
   }
 
-  fn get(&self) -> Option<&VecDeque<Value>> {
+  fn get(&self) -> Option<&VecDeque<Vec<u8>>> {
     if self.messages.len() > 0 {
       trace!("got {} message(s)", self.messages.len());
       Some(&self.messages)
@@ -78,12 +72,9 @@ impl InterClient for UdpClient {
     }
   }
 
-  async fn send(&self, msg: String) -> Result<(), InterError> {
-    trace!("sent to {}: {}", self.server_addr, msg);
-    self
-      .sock
-      .send_to(&msg.into_bytes(), self.server_addr)
-      .await?;
+  async fn send(&self, msg: &[u8]) -> Result<(), InterError> {
+    trace!("sent to {} len {}", self.server_addr, msg.len());
+    self.sock.send_to(&msg, self.server_addr).await?;
     Ok(())
   }
 }

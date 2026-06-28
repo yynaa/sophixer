@@ -5,8 +5,11 @@ use crate::{
   servers::renoise::RenoiseCommunicator,
 };
 use anyhow::Result;
-use intercom::server::{InterServerCommunicator, udp::UdpServer};
-use sophixer_core::{data::buttons::ActionDescriptor, messages::renoise::MessageToRenoise};
+use intercom::server::udp::UdpServer;
+use sophixer_core::{
+  data::buttons::ActionDescriptor,
+  messages::renoise::to::{MessageToRenoise, SetParameterValue},
+};
 use tin_drivers_midi::{
   MidiDriver, MidiPhysicalState,
   devices::launchpad_mini_mk3::{LPM3Driver, LPM3InputMessage, LPM3Position, LPM3Visual},
@@ -37,7 +40,7 @@ impl ViewLPM3SongList {
     }
   }
 
-  pub fn update(
+  pub async fn update(
     &mut self,
     _dt: &Duration,
     tin: &mut TinModel,
@@ -68,7 +71,7 @@ impl ViewLPM3SongList {
                   .insert((song_id.clone(), *bx, *by), default);
                 let messages = button.action.create_renoise_message(default)?;
                 for m in messages {
-                  RenoiseCommunicator::send_message(server, rsa, m)?;
+                  RenoiseCommunicator::send_message(server, rsa, m).await?;
                 }
               }
             }
@@ -82,8 +85,14 @@ impl ViewLPM3SongList {
                 RenoiseCommunicator::send_message(
                   server,
                   rsa,
-                  MessageToRenoise::SetParameterValue(x, y, 1, v),
-                )?
+                  MessageToRenoise::build(SetParameterValue {
+                    track: x,
+                    effect: y,
+                    parameter: 1,
+                    value: v,
+                  })?,
+                )
+                .await?
               }
             }
           }

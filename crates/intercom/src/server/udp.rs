@@ -4,15 +4,14 @@ use std::{
   net::SocketAddr,
 };
 
-use serde_value::Value;
 use tokio::net::UdpSocket;
 
-use crate::{InterError, PrefixedMessage, server::InterServer};
+use crate::{InterError, extract_prefix, server::InterServer};
 
 pub struct UdpServer {
   sock: UdpSocket,
 
-  messages: HashMap<String, VecDeque<(SocketAddr, Value)>>,
+  messages: HashMap<u8, VecDeque<(SocketAddr, Vec<u8>)>>,
 }
 
 #[async_trait::async_trait]
@@ -47,22 +46,20 @@ impl InterServer for UdpServer {
     loop {
       match self.sock.try_recv_from(&mut buf) {
         Ok((len, addr)) => {
-          let msg = String::from_utf8_lossy(&buf[..len]).to_string();
-          if let Ok(wrapped) = serde_json::from_str::<PrefixedMessage>(&msg) {
-            if !self.messages.contains_key(&wrapped.prefix) {
-              trace!("created unexistant prefix storage {}", wrapped.prefix);
-              self
-                .messages
-                .insert(wrapped.prefix.clone(), VecDeque::new());
+          let msg = buf[..len].to_vec();
+          if let Ok((prefix, msg)) = extract_prefix(msg.clone()) {
+            if !self.messages.contains_key(&prefix) {
+              trace!("created unexistant prefix storage {}", prefix);
+              self.messages.insert(prefix.clone(), VecDeque::new());
             }
-            trace!("found {:?}", wrapped);
+            trace!("found message of length {}", msg.len());
             self
               .messages
-              .get_mut(&wrapped.prefix)
+              .get_mut(&prefix)
               .unwrap()
-              .push_back((addr, wrapped.message));
+              .push_back((addr, msg));
           } else {
-            warn!("couldn't read the following message: {}", msg);
+            warn!("couldn't read the following message: {:?}", msg);
           }
         }
         Err(e) => {
@@ -79,14 +76,14 @@ impl InterServer for UdpServer {
     Ok(())
   }
 
-  fn get(&self, prefix: String) -> Option<&VecDeque<(SocketAddr, Value)>> {
+  fn get(&self, prefix: u8) -> Option<&VecDeque<(SocketAddr, Vec<u8>)>> {
     trace!("got messages");
     self.messages.get(&prefix)
   }
 
-  async fn send(&self, addr: SocketAddr, msg: String) -> Result<(), InterError> {
-    trace!("sent to {}: {}", addr, msg);
-    self.sock.send_to(&msg.into_bytes(), addr).await?;
+  async fn send(&self, addr: SocketAddr, msg: &[u8]) -> Result<(), InterError> {
+    trace!("sent to {} length {}", addr, msg.len());
+    self.sock.send_to(msg, addr).await?;
     Ok(())
   }
 }

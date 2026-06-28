@@ -7,7 +7,7 @@ use crate::{
     buttons::{ActionDescriptor, SongButtonActionValue},
     channels::Channel,
   },
-  messages::renoise::MessageToRenoise,
+  messages::renoise::to::{MessageToRenoise, MuteTrack},
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
@@ -50,12 +50,16 @@ impl ActionDescriptor for ToggleChannels {
   fn create_renoise_message(
     &self,
     value: SongButtonActionValue,
-  ) -> Result<Vec<crate::messages::renoise::MessageToRenoise>> {
+  ) -> Result<Vec<crate::messages::renoise::to::MessageToRenoise>> {
     match value {
       SongButtonActionValue::Boolean(b) => {
         let mut msgs = Vec::new();
         for c in &self.channels {
-          msgs.push(MessageToRenoise::MuteTrack(c.to_renoise_number(), !b));
+          // msgs.push(MessageToRenoise::MuteTrack(c.to_renoise_number(), !b));
+          msgs.push(MessageToRenoise::build(MuteTrack {
+            track: c.to_renoise_number(),
+            mute: b,
+          })?)
         }
         Ok(msgs)
       }

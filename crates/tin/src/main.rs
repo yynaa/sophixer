@@ -6,7 +6,6 @@ mod servers;
 mod views;
 
 use crate::model::{LPM3View, TinModel};
-use crate::servers::renoise::RenoiseCommunicator;
 use crate::views::lcxl2_control::ViewLCXL2Control;
 use crate::views::lpm3_matrix::ViewLPM3Matrix;
 use crate::views::lpm3_songlist::ViewLPM3SongList;
@@ -22,7 +21,8 @@ use tin_drivers_midi::MidiDriver;
 use tin_drivers_midi::devices::launch_control_xl_mk2::LCXL2Driver;
 use tin_drivers_midi::devices::launchpad_mini_mk3::LPM3Driver;
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
   pretty_env_logger::init();
 
   let mut set_file = ".".to_string();
@@ -51,7 +51,7 @@ fn main() -> Result<()> {
   let mut lpm3driver = LPM3Driver::connect()?;
   let mut lcxl2driver = LCXL2Driver::connect()?;
 
-  let mut server = UdpServer::start("0.0.0.0:3000")?;
+  let mut server = UdpServer::start("0.0.0.0:3000").await?;
 
   let mut view_lpm3_songlist = ViewLPM3SongList::new(&tin);
   let mut view_lpm3_matrix = ViewLPM3Matrix::new();
@@ -64,39 +64,45 @@ fn main() -> Result<()> {
     let current_time = Instant::now();
     let delta_time = current_time - instant;
 
-    server.fetch()?;
-    RenoiseCommunicator::update_model(&mut tin, &server)?;
+    server.fetch().await?;
+    servers::renoise::update_model(&mut tin, &server).await?;
 
     let lpm3_inputs = lpm3driver.read()?;
     let lcxl2_inputs = lcxl2driver.read()?;
 
     match &tin.lpm3view {
       LPM3View::Matrix => {
-        view_lpm3_matrix.update(
-          &delta_time,
-          &mut tin,
-          &mut lpm3driver,
-          lpm3_inputs.clone(),
-          &server,
-        )?;
+        view_lpm3_matrix
+          .update(
+            &delta_time,
+            &mut tin,
+            &mut lpm3driver,
+            lpm3_inputs.clone(),
+            &server,
+          )
+          .await?;
       }
       LPM3View::SongList => {
-        view_lpm3_songlist.update(
-          &delta_time,
-          &mut tin,
-          &mut lpm3driver,
-          lpm3_inputs.clone(),
-          &server,
-        )?;
+        view_lpm3_songlist
+          .update(
+            &delta_time,
+            &mut tin,
+            &mut lpm3driver,
+            lpm3_inputs.clone(),
+            &server,
+          )
+          .await?;
       }
     }
-    view_lcxl2_control.update(
-      &delta_time,
-      &mut tin,
-      &mut lcxl2driver,
-      lcxl2_inputs.clone(),
-      &server,
-    )?;
+    view_lcxl2_control
+      .update(
+        &delta_time,
+        &mut tin,
+        &mut lcxl2driver,
+        lcxl2_inputs.clone(),
+        &server,
+      )
+      .await?;
 
     lpm3driver.clear()?;
     lcxl2driver.clear()?;

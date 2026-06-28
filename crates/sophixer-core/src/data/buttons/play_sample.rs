@@ -41,7 +41,7 @@ impl ActionDescriptor for PlaySample {
   fn create_renoise_message(
     &self,
     value: SongButtonActionValue,
-  ) -> Result<Vec<crate::messages::renoise::MessageToRenoise>> {
+  ) -> Result<Vec<crate::messages::renoise::to::MessageToRenoise>> {
     match value {
       SongButtonActionValue::None => {
         todo!()

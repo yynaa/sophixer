@@ -5,8 +5,11 @@ use crate::{
   servers::renoise::RenoiseCommunicator,
 };
 use anyhow::Result;
-use intercom::server::{InterServerCommunicator, udp::UdpServer};
-use sophixer_core::{data::buttons::ActionDescriptor, messages::renoise::MessageToRenoise};
+use intercom::server::udp::UdpServer;
+use sophixer_core::{
+  data::buttons::ActionDescriptor,
+  messages::renoise::to::{MessageToRenoise, PlaySection, SetBpm, SetLoop, StopTransport},
+};
 use tin_drivers_midi::{
   MidiDriver, MidiPhysicalState,
   devices::launchpad_mini_mk3::{LPM3Driver, LPM3InputMessage, LPM3Position, LPM3Visual},
@@ -29,7 +32,7 @@ impl ViewLPM3Matrix {
     }
   }
 
-  pub fn update(
+  pub async fn update(
     &mut self,
     _dt: &Duration,
     tin: &mut TinModel,
@@ -77,29 +80,47 @@ impl ViewLPM3Matrix {
                   .insert((song_id.clone(), *bx, *by), default);
                 let messages = button.action.create_renoise_message(default)?;
                 for m in messages {
-                  RenoiseCommunicator::send_message(server, rsa, m)?;
+                  RenoiseCommunicator::send_message(server, rsa, m).await?;
                 }
               }
             }
             if i == LPM3InputMessage::KeyPressed(LPM3Position::Grid(2, 8)) {
-              RenoiseCommunicator::send_message(server, rsa, MessageToRenoise::StopTransport)?;
+              RenoiseCommunicator::send_message(
+                server,
+                rsa,
+                MessageToRenoise::build(StopTransport {})?,
+              )
+              .await?;
             }
           } else {
             if i == LPM3InputMessage::KeyPressed(LPM3Position::Grid(2, 8)) {
               RenoiseCommunicator::send_message(
                 server,
                 rsa,
-                MessageToRenoise::PlaySection(tin.set.stop_seq_pos, false),
-              )?;
+                MessageToRenoise::build(PlaySection {
+                  section: tin.set.stop_seq_pos,
+                  force_play: false,
+                })?,
+              )
+              .await?;
               RenoiseCommunicator::send_message(
                 server,
                 rsa,
-                MessageToRenoise::SetLoop(tin.set.stop_seq_pos, tin.set.stop_seq_pos),
-              )?;
+                MessageToRenoise::build(SetLoop {
+                  start: tin.set.stop_seq_pos,
+                  end: tin.set.stop_seq_pos,
+                })?,
+              )
+              .await?;
             }
             if i == LPM3InputMessage::KeyPressed(LPM3Position::Grid(3, 8)) {
               tin.bpm = song.bpm;
-              RenoiseCommunicator::send_message(server, rsa, MessageToRenoise::SetBPM(tin.bpm))?;
+              RenoiseCommunicator::send_message(
+                server,
+                rsa,
+                MessageToRenoise::build(SetBpm { bpm: tin.bpm })?,
+              )
+              .await?;
             }
           }
 
@@ -111,13 +132,21 @@ impl ViewLPM3Matrix {
                 RenoiseCommunicator::send_message(
                   server,
                   rsa,
-                  MessageToRenoise::PlaySection(pattern.start, self.insta_play),
-                )?;
+                  MessageToRenoise::build(PlaySection {
+                    section: pattern.start,
+                    force_play: self.insta_play,
+                  })?,
+                )
+                .await?;
                 RenoiseCommunicator::send_message(
                   server,
                   rsa,
-                  MessageToRenoise::SetLoop(pattern.loop_start, pattern.loop_end),
-                )?;
+                  MessageToRenoise::build(SetLoop {
+                    start: pattern.loop_start,
+                    end: pattern.loop_end,
+                  })?,
+                )
+                .await?;
                 trace!(
                   "playing pattern start {} loop_start {} loop_end {}",
                   pattern.start, pattern.loop_start, pattern.loop_end
@@ -141,7 +170,7 @@ impl ViewLPM3Matrix {
                 let next = button.action.next(current_state.clone())?;
                 let messages = button.action.create_renoise_message(next)?;
                 for m in messages {
-                  RenoiseCommunicator::send_message(server, rsa, m)?;
+                  RenoiseCommunicator::send_message(server, rsa, m).await?;
                 }
                 tin.button_states.insert(key, next);
               }

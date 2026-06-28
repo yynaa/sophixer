@@ -25,3 +25,4 @@ sets/
 .oc/
 
 .env
+.gen

@@ -7,7 +7,7 @@ use crate::{
     buttons::{ActionDescriptor, SongButtonActionValue},
     channels::Channel,
   },
-  messages::renoise::MessageToRenoise,
+  messages::renoise::to::{MessageToRenoise, MuteTrackSequenceSlot},
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
@@ -50,16 +50,16 @@ impl ActionDescriptor for ToggleTrackPatterns {
   fn create_renoise_message(
     &self,
     value: SongButtonActionValue,
-  ) -> Result<Vec<crate::messages::renoise::MessageToRenoise>> {
+  ) -> Result<Vec<crate::messages::renoise::to::MessageToRenoise>> {
     match value {
       SongButtonActionValue::Boolean(b) => {
         let mut msgs = Vec::new();
         for (c, seq) in &self.track_patterns {
-          msgs.push(MessageToRenoise::MuteTrackSequenceSlot(
-            c.to_renoise_number(),
-            *seq,
-            !b,
-          ));
+          msgs.push(MessageToRenoise::build(MuteTrackSequenceSlot {
+            track: c.to_renoise_number(),
+            sequence: *seq,
+            bypass: b,
+          })?);
         }
         Ok(msgs)
       }

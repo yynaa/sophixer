@@ -6,7 +6,7 @@ use crate::{
     buttons::{ActionDescriptor, SongButtonActionValue},
     channels::Channel,
   },
-  messages::renoise::MessageToRenoise,
+  messages::renoise::to::{MessageToRenoise, SetParameterValue},
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -77,19 +77,19 @@ impl ActionDescriptor for CycleEffectParameterValue {
   fn create_renoise_message(
     &self,
     value: SongButtonActionValue,
-  ) -> Result<Vec<crate::messages::renoise::MessageToRenoise>> {
+  ) -> Result<Vec<crate::messages::renoise::to::MessageToRenoise>> {
     match value {
       SongButtonActionValue::Number(n) => {
         let c = self
           .cycles
           .get(n)
           .ok_or(anyhow::Error::msg("no such cycle"))?;
-        Ok(vec![MessageToRenoise::SetParameterValue(
-          self.track.to_renoise_number(),
-          self.effect,
-          self.param,
-          c.value,
-        )])
+        Ok(vec![MessageToRenoise::build(SetParameterValue {
+          track: self.track.to_renoise_number(),
+          effect: self.effect,
+          parameter: self.param,
+          value: c.value,
+        })?])
       }
       _ => Err(anyhow::Error::msg("invalid value")),
     }

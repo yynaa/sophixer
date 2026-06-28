@@ -2,8 +2,11 @@ use std::{collections::VecDeque, time::Duration};
 
 use crate::{model::TinModel, servers::renoise::RenoiseCommunicator};
 use anyhow::Result;
-use intercom::server::{InterServerCommunicator, udp::UdpServer};
-use sophixer_core::{data::channels::Channel, messages::renoise::MessageToRenoise};
+use intercom::server::udp::UdpServer;
+use sophixer_core::{
+  data::channels::Channel,
+  messages::renoise::to::{MessageToRenoise, SetBpm, SetParameterValue},
+};
 use tin_drivers_midi::{
   MidiDriver,
   devices::launch_control_xl_mk2::{LCXL2Driver, LCXL2InputMessage, LCXL2Position, LCXL2Visual},
@@ -16,7 +19,7 @@ impl ViewLCXL2Control {
     Self {}
   }
 
-  pub fn update(
+  pub async fn update(
     &mut self,
     _dt: &Duration,
     tin: &mut TinModel,
@@ -31,50 +34,54 @@ impl ViewLCXL2Control {
             RenoiseCommunicator::send_message(
               server,
               rsa,
-              MessageToRenoise::SetParameterValue(
-                Channel::Lead(x as u64).to_renoise_number(),
-                2,
-                1,
-                (*v as f64) / 128.,
-              ),
-            )?;
+              MessageToRenoise::build(SetParameterValue {
+                track: Channel::Lead(x as u64).to_renoise_number(),
+                effect: 2,
+                parameter: 1,
+                value: (*v as f64) / 128.,
+              })?,
+            )
+            .await?;
           }
           if let Some(v) = i.has_analog_moved(LCXL2Position::Knob(x, 1)) {
             RenoiseCommunicator::send_message(
               server,
               rsa,
-              MessageToRenoise::SetParameterValue(
-                Channel::Drum(x as u64).to_renoise_number(),
-                2,
-                1,
-                (*v as f64) / 128.,
-              ),
-            )?;
+              MessageToRenoise::build(SetParameterValue {
+                track: Channel::Drum(x as u64).to_renoise_number(),
+                effect: 2,
+                parameter: 1,
+                value: (*v as f64) / 128.,
+              })?,
+            )
+            .await?;
           }
 
           if let Some(v) = i.has_analog_moved(LCXL2Position::Knob(x, 2)) {
             RenoiseCommunicator::send_message(
               server,
               rsa,
-              MessageToRenoise::SetParameterValue(
-                Channel::Drum(x as u64).to_renoise_number(),
-                3,
-                1,
-                (*v as f64) / 128.,
-              ),
-            )?;
+              MessageToRenoise::build(SetParameterValue {
+                track: Channel::Drum(x as u64).to_renoise_number(),
+                effect: 3,
+                parameter: 1,
+                value: (*v as f64) / 128.,
+              })?,
+            )
+            .await?;
           }
           if let Some(v) = i.has_analog_moved(LCXL2Position::Slider(x)) {
             RenoiseCommunicator::send_message(
               server,
               rsa,
-              MessageToRenoise::SetParameterValue(
-                Channel::Lead(x as u64).to_renoise_number(),
-                3,
-                1,
-                (*v as f64) / 128.,
-              ),
-            )?;
+              MessageToRenoise::build(SetParameterValue {
+                track: Channel::Lead(x as u64).to_renoise_number(),
+                effect: 3,
+                parameter: 1,
+                value: (*v as f64) / 128.,
+              })?,
+            )
+            .await?;
           }
         }
 
@@ -82,81 +89,88 @@ impl ViewLCXL2Control {
           RenoiseCommunicator::send_message(
             server,
             rsa,
-            MessageToRenoise::SetParameterValue(
-              Channel::MasterLead.to_renoise_number(),
-              2,
-              1,
-              (*v as f64) / 128.,
-            ),
-          )?;
+            MessageToRenoise::build(SetParameterValue {
+              track: Channel::MasterLead.to_renoise_number(),
+              effect: 2,
+              parameter: 1,
+              value: (*v as f64) / 128.,
+            })?,
+          )
+          .await?;
         }
         if let Some(v) = i.has_analog_moved(LCXL2Position::Knob(7, 1)) {
           RenoiseCommunicator::send_message(
             server,
             rsa,
-            MessageToRenoise::SetParameterValue(
-              Channel::MasterDrum.to_renoise_number(),
-              2,
-              1,
-              (*v as f64) / 128.,
-            ),
-          )?;
+            MessageToRenoise::build(SetParameterValue {
+              track: Channel::MasterDrum.to_renoise_number(),
+              effect: 2,
+              parameter: 1,
+              value: (*v as f64) / 128.,
+            })?,
+          )
+          .await?;
         }
 
         if let Some(v) = i.has_analog_moved(LCXL2Position::Knob(7, 2)) {
           RenoiseCommunicator::send_message(
             server,
             rsa,
-            MessageToRenoise::SetParameterValue(
-              Channel::MasterDrum.to_renoise_number(),
-              3,
-              1,
-              (*v as f64) / 128.,
-            ),
-          )?;
+            MessageToRenoise::build(SetParameterValue {
+              track: Channel::MasterDrum.to_renoise_number(),
+              effect: 3,
+              parameter: 1,
+              value: (*v as f64) / 128.,
+            })?,
+          )
+          .await?;
         }
         if let Some(v) = i.has_analog_moved(LCXL2Position::Slider(7)) {
           RenoiseCommunicator::send_message(
             server,
             rsa,
-            MessageToRenoise::SetParameterValue(
-              Channel::MasterLead.to_renoise_number(),
-              3,
-              1,
-              (*v as f64) / 128.,
-            ),
-          )?;
+            MessageToRenoise::build(SetParameterValue {
+              track: Channel::MasterLead.to_renoise_number(),
+              effect: 3,
+              parameter: 1,
+              value: (*v as f64) / 128.,
+            })?,
+          )
+          .await?;
         }
 
         if let Some(v) = i.has_analog_moved(LCXL2Position::Knob(8, 3)) {
           RenoiseCommunicator::send_message(
             server,
             rsa,
-            MessageToRenoise::SetParameterValue(
-              Channel::Master.to_renoise_number(),
-              2,
-              1,
-              (*v as f64) / 128.,
-            ),
-          )?;
+            MessageToRenoise::build(SetParameterValue {
+              track: Channel::Master.to_renoise_number(),
+              effect: 2,
+              parameter: 1,
+              value: (*v as f64) / 128.,
+            })?,
+          )
+          .await?;
         }
 
         if let Some(v) = i.has_analog_moved(LCXL2Position::Slider(8)) {
           RenoiseCommunicator::send_message(
             server,
             rsa,
-            MessageToRenoise::SetParameterValue(
-              Channel::Master.to_renoise_number(),
-              3,
-              1,
-              (*v as f64) / 128.,
-            ),
-          )?;
+            MessageToRenoise::build(SetParameterValue {
+              track: Channel::Master.to_renoise_number(),
+              effect: 3,
+              parameter: 1,
+              value: (*v as f64) / 128.,
+            })?,
+          )
+          .await?;
         }
 
         if let Some(v) = i.has_analog_moved(LCXL2Position::Knob(8, 2)) {
           let bpm = tin.bpm + (*v as i64 - 64) as f64 * 0.5;
-          RenoiseCommunicator::send_message(server, rsa, MessageToRenoise::SetBPM(bpm))?;
+          RenoiseCommunicator::send_message(server, rsa, MessageToRenoise::build(SetBpm { bpm })?)
+            .await?;
         }
       }
     }

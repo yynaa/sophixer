@@ -1,46 +1,39 @@
 pub mod udp;
 
 use log::warn;
-use serde_value::{Value, to_value};
 use std::{collections::VecDeque, marker::PhantomData};
 
-use crate::{
-  InterError, InterMessageIncoming, InterMessageOutgoing, InterMessagePrefixed, PrefixedMessage,
-};
+use crate::{InterError, InterMessageIncoming, InterMessageOutgoing, InterMessagePrefixed};
 
 #[async_trait::async_trait]
 pub trait InterClient: Sized {
   async fn start(addr: &str) -> Result<Self, InterError>;
   async fn stop(self) -> Result<(), InterError>;
-  async fn send(&self, msg: String) -> Result<(), InterError>;
+  async fn send(&self, msg: &[u8]) -> Result<(), InterError>;
   async fn fetch(&mut self) -> Result<(), InterError>;
-  fn get(&self) -> Option<&VecDeque<Value>>;
+  fn get(&self) -> Option<&VecDeque<Vec<u8>>>;
 }
 
-pub struct InterClientCommunicator<'de, C, I, O>
+pub struct InterClientCommunicator<C, I, O>
 where
   C: InterClient,
-  I: InterMessageIncoming<'de>,
+  I: InterMessageIncoming,
   O: InterMessageOutgoing + InterMessagePrefixed,
 {
   c: PhantomData<C>,
-  i: PhantomData<&'de I>,
+  i: PhantomData<I>,
   o: PhantomData<O>,
 }
 
-impl<
-  'de,
-  C: InterClient,
-  I: InterMessageIncoming<'de>,
-  O: InterMessageOutgoing + InterMessagePrefixed,
-> InterClientCommunicator<'de, C, I, O>
+impl<'de, C: InterClient, I: InterMessageIncoming, O: InterMessageOutgoing + InterMessagePrefixed>
+  InterClientCommunicator<C, I, O>
 {
   pub fn get_messages(client: &C) -> Option<VecDeque<I>> {
     client.get().map(|deque| {
       let mut deque_clone = deque.clone();
       let mut r = VecDeque::new();
       while let Some(msg) = deque_clone.pop_front() {
-        if let Ok(msg) = msg.clone().deserialize_into::<I>() {
+        if let Some(msg) = I::deserialize(msg.clone()) {
           r.push_back(msg);
         } else {
           warn!("unrecognized message from server: {:?}", msg);
@@ -50,12 +43,9 @@ impl<
     })
   }
   pub async fn send_message(client: &C, msg: O) -> Result<(), InterError> {
-    let prefixed = PrefixedMessage {
-      prefix: O::get_prefix(),
-      message: to_value(&msg)?,
-    };
-    let msg_string = serde_json::to_string(&prefixed)?;
-    client.send(msg_string).await?;
+    let mut bytes = msg.serialize().ok_or(InterError::NoSerialization)?.to_vec();
+    bytes.insert(0, O::get_prefix());
+    client.send(&bytes).await?;
     Ok(())
   }
 }

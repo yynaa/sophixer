@@ -7,8 +7,6 @@
 pub mod client;
 pub mod server;
 
-use serde::{Deserialize, Serialize};
-use serde_value::Value;
 use thiserror::Error;
 
 #[macro_use]
@@ -23,12 +21,6 @@ pub enum InterError {
   #[error("IO error: {0:?}")]
   IOError(#[from] std::io::Error),
 
-  #[error("serde JSON error: {0:?}")]
-  SerdeJSONError(#[from] serde_json::Error),
-
-  #[error("serde-value error: {0:?}")]
-  SerdeValueSerializerError(#[from] serde_value::SerializerError),
-
   #[error("thread error: {0:?}")]
   ThreadError(String),
 
@@ -37,23 +29,36 @@ pub enum InterError {
 
   #[error("invalid socket address string: {0}")]
   NoSocketAddr(String),
-}
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct PrefixedMessage {
-  prefix: String,
-  message: Value,
+  #[error("empty message")]
+  EmptyMessage,
+
+  #[error("failed to serialize")]
+  NoSerialization,
 }
 
 #[async_trait::async_trait]
 pub trait InterMessagePrefixed {
-  fn get_prefix() -> String;
+  fn get_prefix() -> u8;
+}
+
+pub(crate) fn extract_prefix(mut bytes: Vec<u8>) -> Result<(u8, Vec<u8>), InterError> {
+  if bytes.len() == 0 {
+    Err(InterError::EmptyMessage)
+  } else {
+    let prefix = bytes.remove(0);
+    Ok((prefix, bytes))
+  }
 }
 
 /// trait for messages coming from clients
 #[async_trait::async_trait]
-pub trait InterMessageIncoming<'de>: Send + Sized + Deserialize<'de> {}
+pub trait InterMessageIncoming: Send + Sized {
+  fn deserialize(bytes: Vec<u8>) -> Option<Self>;
+}
 
 /// trait for message going to clients
 #[async_trait::async_trait]
-pub trait InterMessageOutgoing: Send + Sized + Serialize {}
+pub trait InterMessageOutgoing: Send + Sized {
+  fn serialize(&self) -> Option<Vec<u8>>;
+}
