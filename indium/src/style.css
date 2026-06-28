@@ -1,0 +1,10 @@
+* {
+  margin: 0;
+  padding: 0;
+  touch-action: none;
+  -ms-touch-action: none;
+}
+
+#canvasRoot {
+  transform: transform3d(0, 0, 0);
+}

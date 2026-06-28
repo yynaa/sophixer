@@ -1,8 +1,9 @@
 # Overview
 
 Sophixer is composed of various crates/plugins:
-- 🥽 Tin, the central hub for all communications
+- 🥽 Tin, a Rust server, central hub for all communications
 - 🦴 Calcium, a Renoise plugin for playback control
+- 🔋 Indium, a web interface with knobs & pads, designed for early 2010s webkit
 
 > [!CAUTION]
 > Sophixer is unstable until 1.0 comes out!  
