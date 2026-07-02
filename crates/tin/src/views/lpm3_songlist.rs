@@ -6,10 +6,7 @@ use crate::{
 };
 use anyhow::Result;
 use intercom::server::udp::UdpServer;
-use sophixer_core::{
-  data::buttons::ActionDescriptor,
-  messages::renoise::to::{MessageToRenoise, SetParameterValue},
-};
+use sophixer_core::{data::buttons::ActionDescriptor, messages::renoise::to::SetParameterValue};
 use tin_drivers_midi::{
   MidiDriver, MidiPhysicalState,
   devices::launchpad_mini_mk3::{LPM3Driver, LPM3InputMessage, LPM3Position, LPM3Visual},
@@ -85,12 +82,13 @@ impl ViewLPM3SongList {
                 RenoiseCommunicator::send_message(
                   server,
                   rsa,
-                  MessageToRenoise::build(SetParameterValue {
+                  SetParameterValue {
                     track: x,
                     effect: y,
                     parameter: 1,
                     value: v,
-                  })?,
+                  }
+                  .into(),
                 )
                 .await?
               }

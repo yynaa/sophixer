@@ -18,7 +18,7 @@ pub struct ButtonEditor {
   pos: (i64, i64),
 
   channel_buffer: Channel,
-  u64_buffer: u64,
+  u16_buffer: u16,
 }
 
 impl ButtonEditor {
@@ -28,7 +28,7 @@ impl ButtonEditor {
       pos,
 
       channel_buffer: Channel::Master,
-      u64_buffer: 0,
+      u16_buffer: 0,
     }
   }
 }
@@ -106,7 +106,7 @@ impl Window for ButtonEditor {
               ui.heading("track patterns");
 
               let tpclone = inner.track_patterns.clone();
-              let mut tps = tpclone.iter().collect::<Vec<&(Channel, u64)>>();
+              let mut tps = tpclone.iter().collect::<Vec<&(Channel, u16)>>();
               tps.sort();
               for tp in tps {
                 ui.horizontal(|ui| {
@@ -119,11 +119,11 @@ impl Window for ButtonEditor {
               ui.horizontal(|ui| {
                 channel_selector(&mut self.channel_buffer, ui);
                 ui.label("pos");
-                ui.add(DragValue::new(&mut self.u64_buffer));
+                ui.add(DragValue::new(&mut self.u16_buffer));
                 if ui.button("add").clicked() {
                   inner
                     .track_patterns
-                    .insert((self.channel_buffer.clone(), self.u64_buffer));
+                    .insert((self.channel_buffer.clone(), self.u16_buffer));
                 }
               });
             }

@@ -34,6 +34,7 @@ impl<'de, C: InterClient, I: InterMessageIncoming, O: InterMessageOutgoing + Int
       let mut r = VecDeque::new();
       while let Some(msg) = deque_clone.pop_front() {
         if let Some(msg) = I::deserialize(msg.clone()) {
+          trace!("received: {:?}", msg);
           r.push_back(msg);
         } else {
           warn!("unrecognized message from server: {:?}", msg);

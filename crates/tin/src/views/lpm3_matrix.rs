@@ -8,7 +8,7 @@ use anyhow::Result;
 use intercom::server::udp::UdpServer;
 use sophixer_core::{
   data::buttons::ActionDescriptor,
-  messages::renoise::to::{MessageToRenoise, PlaySection, SetBpm, SetLoop, StopTransport},
+  messages::renoise::to::{PlaySection, SetBpm, SetLoop, StopTransport},
 };
 use tin_drivers_midi::{
   MidiDriver, MidiPhysicalState,
@@ -85,42 +85,35 @@ impl ViewLPM3Matrix {
               }
             }
             if i == LPM3InputMessage::KeyPressed(LPM3Position::Grid(2, 8)) {
-              RenoiseCommunicator::send_message(
-                server,
-                rsa,
-                MessageToRenoise::build(StopTransport {})?,
-              )
-              .await?;
+              RenoiseCommunicator::send_message(server, rsa, StopTransport {}.into()).await?;
             }
           } else {
             if i == LPM3InputMessage::KeyPressed(LPM3Position::Grid(2, 8)) {
               RenoiseCommunicator::send_message(
                 server,
                 rsa,
-                MessageToRenoise::build(PlaySection {
+                PlaySection {
                   section: tin.set.stop_seq_pos,
                   force_play: false,
-                })?,
+                }
+                .into(),
               )
               .await?;
               RenoiseCommunicator::send_message(
                 server,
                 rsa,
-                MessageToRenoise::build(SetLoop {
-                  start: tin.set.stop_seq_pos,
-                  end: tin.set.stop_seq_pos,
-                })?,
+                SetLoop {
+                  loop_start: tin.set.stop_seq_pos,
+                  loop_end: tin.set.stop_seq_pos,
+                }
+                .into(),
               )
               .await?;
             }
             if i == LPM3InputMessage::KeyPressed(LPM3Position::Grid(3, 8)) {
               tin.bpm = song.bpm;
-              RenoiseCommunicator::send_message(
-                server,
-                rsa,
-                MessageToRenoise::build(SetBpm { bpm: tin.bpm })?,
-              )
-              .await?;
+              RenoiseCommunicator::send_message(server, rsa, SetBpm { bpm: tin.bpm }.into())
+                .await?;
             }
           }
 
@@ -132,19 +125,21 @@ impl ViewLPM3Matrix {
                 RenoiseCommunicator::send_message(
                   server,
                   rsa,
-                  MessageToRenoise::build(PlaySection {
+                  PlaySection {
                     section: pattern.start,
                     force_play: self.insta_play,
-                  })?,
+                  }
+                  .into(),
                 )
                 .await?;
                 RenoiseCommunicator::send_message(
                   server,
                   rsa,
-                  MessageToRenoise::build(SetLoop {
-                    start: pattern.loop_start,
-                    end: pattern.loop_end,
-                  })?,
+                  SetLoop {
+                    loop_start: pattern.loop_start,
+                    loop_end: pattern.loop_end,
+                  }
+                  .into(),
                 )
                 .await?;
                 trace!(

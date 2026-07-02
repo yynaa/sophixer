@@ -1,7 +1,7 @@
 {
-  "workspace.library": ["/code/o/definitions"],
+  "workspace.library": ["/code/o/definitions", "renoise/xyz.yyna.Calcium.xrnx"],
   "runtime.plugin": ["/code/o/definitions/plugin.lua"],
-    "diagnostics.disable": [
-        "trailing-space"
-    ]
+  "diagnostics.disable": ["trailing-space"],
+  "workspace.ignoreDir": ["renoise/massage"],
+  "format.enable": true
 }

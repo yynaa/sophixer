@@ -9,9 +9,9 @@ use crate::data::buttons::SongButton;
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct SongPattern {
-  pub start: u64,
-  pub loop_start: u64,
-  pub loop_end: u64,
+  pub start: u16,
+  pub loop_start: u16,
+  pub loop_end: u16,
   pub color: [u8; 3],
 }
 
@@ -45,7 +45,7 @@ impl Song {
 pub struct Set {
   pub name: String,
   pub authors: String,
-  pub stop_seq_pos: u64,
+  pub stop_seq_pos: u16,
   pub songs: HashMap<String, Song>,
 }
 

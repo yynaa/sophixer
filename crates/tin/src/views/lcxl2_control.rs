@@ -5,7 +5,7 @@ use anyhow::Result;
 use intercom::server::udp::UdpServer;
 use sophixer_core::{
   data::channels::Channel,
-  messages::renoise::to::{MessageToRenoise, SetBpm, SetParameterValue},
+  messages::renoise::to::{SetBpm, SetParameterValue},
 };
 use tin_drivers_midi::{
   MidiDriver,
@@ -34,12 +34,13 @@ impl ViewLCXL2Control {
             RenoiseCommunicator::send_message(
               server,
               rsa,
-              MessageToRenoise::build(SetParameterValue {
-                track: Channel::Lead(x as u64).to_renoise_number(),
+              SetParameterValue {
+                track: Channel::Lead(x as u16).to_renoise_number(),
                 effect: 2,
                 parameter: 1,
                 value: (*v as f64) / 128.,
-              })?,
+              }
+              .into(),
             )
             .await?;
           }
@@ -47,12 +48,13 @@ impl ViewLCXL2Control {
             RenoiseCommunicator::send_message(
               server,
               rsa,
-              MessageToRenoise::build(SetParameterValue {
-                track: Channel::Drum(x as u64).to_renoise_number(),
+              SetParameterValue {
+                track: Channel::Drum(x as u16).to_renoise_number(),
                 effect: 2,
                 parameter: 1,
                 value: (*v as f64) / 128.,
-              })?,
+              }
+              .into(),
             )
             .await?;
           }
@@ -61,12 +63,13 @@ impl ViewLCXL2Control {
             RenoiseCommunicator::send_message(
               server,
               rsa,
-              MessageToRenoise::build(SetParameterValue {
-                track: Channel::Drum(x as u64).to_renoise_number(),
+              SetParameterValue {
+                track: Channel::Drum(x as u16).to_renoise_number(),
                 effect: 3,
                 parameter: 1,
                 value: (*v as f64) / 128.,
-              })?,
+              }
+              .into(),
             )
             .await?;
           }
@@ -74,12 +77,13 @@ impl ViewLCXL2Control {
             RenoiseCommunicator::send_message(
               server,
               rsa,
-              MessageToRenoise::build(SetParameterValue {
-                track: Channel::Lead(x as u64).to_renoise_number(),
+              SetParameterValue {
+                track: Channel::Lead(x as u16).to_renoise_number(),
                 effect: 3,
                 parameter: 1,
                 value: (*v as f64) / 128.,
-              })?,
+              }
+              .into(),
             )
             .await?;
           }
@@ -89,12 +93,13 @@ impl ViewLCXL2Control {
           RenoiseCommunicator::send_message(
             server,
             rsa,
-            MessageToRenoise::build(SetParameterValue {
+            SetParameterValue {
               track: Channel::MasterLead.to_renoise_number(),
               effect: 2,
               parameter: 1,
               value: (*v as f64) / 128.,
-            })?,
+            }
+            .into(),
           )
           .await?;
         }
@@ -102,12 +107,13 @@ impl ViewLCXL2Control {
           RenoiseCommunicator::send_message(
             server,
             rsa,
-            MessageToRenoise::build(SetParameterValue {
+            SetParameterValue {
               track: Channel::MasterDrum.to_renoise_number(),
               effect: 2,
               parameter: 1,
               value: (*v as f64) / 128.,
-            })?,
+            }
+            .into(),
           )
           .await?;
         }
@@ -116,12 +122,13 @@ impl ViewLCXL2Control {
           RenoiseCommunicator::send_message(
             server,
             rsa,
-            MessageToRenoise::build(SetParameterValue {
+            SetParameterValue {
               track: Channel::MasterDrum.to_renoise_number(),
               effect: 3,
               parameter: 1,
               value: (*v as f64) / 128.,
-            })?,
+            }
+            .into(),
           )
           .await?;
         }
@@ -129,12 +136,13 @@ impl ViewLCXL2Control {
           RenoiseCommunicator::send_message(
             server,
             rsa,
-            MessageToRenoise::build(SetParameterValue {
+            SetParameterValue {
               track: Channel::MasterLead.to_renoise_number(),
               effect: 3,
               parameter: 1,
               value: (*v as f64) / 128.,
-            })?,
+            }
+            .into(),
           )
           .await?;
         }
@@ -143,12 +151,13 @@ impl ViewLCXL2Control {
           RenoiseCommunicator::send_message(
             server,
             rsa,
-            MessageToRenoise::build(SetParameterValue {
+            SetParameterValue {
               track: Channel::Master.to_renoise_number(),
               effect: 2,
               parameter: 1,
               value: (*v as f64) / 128.,
-            })?,
+            }
+            .into(),
           )
           .await?;
         }
@@ -157,20 +166,20 @@ impl ViewLCXL2Control {
           RenoiseCommunicator::send_message(
             server,
             rsa,
-            MessageToRenoise::build(SetParameterValue {
+            SetParameterValue {
               track: Channel::Master.to_renoise_number(),
               effect: 3,
               parameter: 1,
               value: (*v as f64) / 128.,
-            })?,
+            }
+            .into(),
           )
           .await?;
         }
 
         if let Some(v) = i.has_analog_moved(LCXL2Position::Knob(8, 2)) {
           let bpm = tin.bpm + (*v as i64 - 64) as f64 * 0.5;
-          RenoiseCommunicator::send_message(server, rsa, MessageToRenoise::build(SetBpm { bpm })?)
-            .await?;
+          RenoiseCommunicator::send_message(server, rsa, SetBpm { bpm }.into()).await?;
         }
       }
     }

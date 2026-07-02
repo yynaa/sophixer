@@ -7,12 +7,12 @@ use crate::{
     buttons::{ActionDescriptor, SongButtonActionValue},
     channels::Channel,
   },
-  messages::renoise::to::{MessageToRenoise, MuteTrackSequenceSlot},
+  messages::renoise::to::MuteTrackSequenceSlot,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 pub struct ToggleTrackPatterns {
-  pub track_patterns: HashSet<(Channel, u64)>,
+  pub track_patterns: HashSet<(Channel, u16)>,
   pub default: bool,
   pub color_off: [u8; 3],
   pub color_on: [u8; 3],
@@ -55,11 +55,14 @@ impl ActionDescriptor for ToggleTrackPatterns {
       SongButtonActionValue::Boolean(b) => {
         let mut msgs = Vec::new();
         for (c, seq) in &self.track_patterns {
-          msgs.push(MessageToRenoise::build(MuteTrackSequenceSlot {
-            track: c.to_renoise_number(),
-            sequence: *seq,
-            bypass: b,
-          })?);
+          msgs.push(
+            MuteTrackSequenceSlot {
+              track: c.to_renoise_number(),
+              sequence: *seq,
+              bypass: !b,
+            }
+            .into(),
+          );
         }
         Ok(msgs)
       }

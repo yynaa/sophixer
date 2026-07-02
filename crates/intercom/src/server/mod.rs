@@ -41,6 +41,7 @@ impl<'de, S: InterServer, I: InterMessageIncoming + InterMessagePrefixed, O: Int
         //   }
         // }
         if let Some(msg) = I::deserialize(msg.clone()) {
+          trace!("received: {:?}", msg);
           r.push_back((addr, msg));
         } else {
           warn!("unrecognized message from client {}: {:?}", addr, msg);
@@ -50,6 +51,7 @@ impl<'de, S: InterServer, I: InterMessageIncoming + InterMessagePrefixed, O: Int
     })
   }
   pub async fn send_message(server: &S, addr: SocketAddr, msg: O) -> Result<(), InterError> {
+    trace!("sending: {:?}", msg);
     let msg_string = msg.serialize().ok_or(InterError::NoSerialization)?;
     server.send(addr, &msg_string).await?;
     Ok(())

@@ -40,7 +40,6 @@ impl InterServer for UdpServer {
   /// }
   /// ```
   async fn fetch(&mut self) -> Result<(), InterError> {
-    trace!("fetching messages");
     self.messages.clear();
     let mut buf = [0; 1024];
     loop {
@@ -64,7 +63,6 @@ impl InterServer for UdpServer {
         }
         Err(e) => {
           if e.kind() == WouldBlock {
-            trace!("no more messages");
             break;
           } else {
             warn!("unexpected error! {}", e);
@@ -77,7 +75,6 @@ impl InterServer for UdpServer {
   }
 
   fn get(&self, prefix: u8) -> Option<&VecDeque<(SocketAddr, Vec<u8>)>> {
-    trace!("got messages");
     self.messages.get(&prefix)
   }
 

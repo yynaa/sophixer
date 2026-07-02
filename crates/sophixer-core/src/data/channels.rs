@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, Ord)]
 pub enum Channel {
-  Lead(u64),
-  Drum(u64),
+  Lead(u16),
+  Drum(u16),
   MasterLead,
   MasterDrum,
   Master,
@@ -18,7 +18,7 @@ impl Default for Channel {
 }
 
 impl Channel {
-  pub fn to_renoise_number(&self) -> u64 {
+  pub fn to_renoise_number(&self) -> u16 {
     match self {
       Self::Lead(n) => *n,
       Self::Drum(n) => 7 + *n,

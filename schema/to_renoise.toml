@@ -1,0 +1,106 @@
+name = "message_to_renoise"
+
+[commands.welcome]
+id = 1
+
+[commands.unused]
+id = 2
+
+[commands.play_section]
+id = 3
+
+[[commands.play_section.arguments]]
+name = "section"
+format = "U16"
+
+[[commands.play_section.arguments]]
+name = "force_play"
+format = "Bool"
+
+[commands.set_loop]
+id = 4
+
+[[commands.set_loop.arguments]]
+name = "loop_start"
+format = "U16"
+
+[[commands.set_loop.arguments]]
+name = "loop_end"
+format = "U16"
+
+[commands.stop_transport]
+id = 5
+
+[commands.mute_track]
+id = 6
+
+[[commands.mute_track.arguments]]
+name = "track"
+format = "U16"
+
+[[commands.mute_track.arguments]]
+name = "mute"
+format = "Bool"
+
+[commands.mute_track_sequence_slot]
+id = 7
+
+[[commands.mute_track_sequence_slot.arguments]]
+name = "track"
+format = "U16"
+
+[[commands.mute_track_sequence_slot.arguments]]
+name = "sequence"
+format = "U16"
+
+[[commands.mute_track_sequence_slot.arguments]]
+name = "bypass"
+format = "Bool"
+
+[commands.bypass_effect]
+id = 8
+
+[[commands.bypass_effect.arguments]]
+name = "track"
+format = "U16"
+
+[[commands.bypass_effect.arguments]]
+name = "effect"
+format = "U16"
+
+[[commands.bypass_effect.arguments]]
+name = "bypass"
+format = "Bool"
+
+[commands.set_parameter_value]
+id = 9
+
+[[commands.set_parameter_value.arguments]]
+name = "track"
+format = "U16"
+
+[[commands.set_parameter_value.arguments]]
+name = "effect"
+format = "U16"
+
+[[commands.set_parameter_value.arguments]]
+name = "parameter"
+format = "U16"
+
+[[commands.set_parameter_value.arguments]]
+name = "value"
+format = "F64"
+
+[commands.set_bpm]
+id = 10
+
+[[commands.set_bpm.arguments]]
+name = "bpm"
+format = "F64"
+
+[commands.set_master_volume]
+id = 11
+
+[[commands.set_master_volume.arguments]]
+name = "volume"
+format = "F64"

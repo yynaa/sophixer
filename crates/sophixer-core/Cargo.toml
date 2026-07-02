@@ -14,8 +14,6 @@ intercom = { path = "../intercom" }
 serde = { version = "1.0.228", features = ["derive"] }
 ron = { version = "0.12.0" }
 enum_dispatch = { version = "0.3" }
-prost = "0.14"
-derive_more = { version = "2.1", features = ["from"] }
 
 [build-dependencies]
-prost-build = "0.14"
+massage = { git = "https://github.com/yynaa/massage.git", tag = "v0.25.07.2", subdir = "rust/" }

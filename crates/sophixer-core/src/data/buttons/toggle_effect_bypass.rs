@@ -6,13 +6,13 @@ use crate::{
     buttons::{ActionDescriptor, SongButtonActionValue},
     channels::Channel,
   },
-  messages::renoise::to::{BypassEffect, MessageToRenoise},
+  messages::renoise::to::BypassEffect,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 pub struct ToggleEffectBypass {
   pub track: Channel,
-  pub effect: u64,
+  pub effect: u16,
   pub default: bool,
   pub color_off: [u8; 3],
   pub color_on: [u8; 3],
@@ -52,11 +52,14 @@ impl ActionDescriptor for ToggleEffectBypass {
     value: SongButtonActionValue,
   ) -> Result<Vec<crate::messages::renoise::to::MessageToRenoise>> {
     match value {
-      SongButtonActionValue::Boolean(b) => Ok(vec![MessageToRenoise::build(BypassEffect {
-        track: self.track.to_renoise_number(),
-        effect: self.effect,
-        bypass: b,
-      })?]),
+      SongButtonActionValue::Boolean(b) => Ok(vec![
+        BypassEffect {
+          track: self.track.to_renoise_number(),
+          effect: self.effect,
+          bypass: b,
+        }
+        .into(),
+      ]),
       _ => Err(anyhow::Error::msg("invalid value")),
     }
   }

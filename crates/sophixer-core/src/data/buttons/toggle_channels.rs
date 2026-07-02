@@ -7,7 +7,7 @@ use crate::{
     buttons::{ActionDescriptor, SongButtonActionValue},
     channels::Channel,
   },
-  messages::renoise::to::{MessageToRenoise, MuteTrack},
+  messages::renoise::to::MuteTrack,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
@@ -56,10 +56,13 @@ impl ActionDescriptor for ToggleChannels {
         let mut msgs = Vec::new();
         for c in &self.channels {
           // msgs.push(MessageToRenoise::MuteTrack(c.to_renoise_number(), !b));
-          msgs.push(MessageToRenoise::build(MuteTrack {
-            track: c.to_renoise_number(),
-            mute: b,
-          })?)
+          msgs.push(
+            MuteTrack {
+              track: c.to_renoise_number(),
+              mute: b,
+            }
+            .into(),
+          )
         }
         Ok(msgs)
       }

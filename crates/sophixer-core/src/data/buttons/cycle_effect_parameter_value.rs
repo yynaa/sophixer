@@ -6,7 +6,7 @@ use crate::{
     buttons::{ActionDescriptor, SongButtonActionValue},
     channels::Channel,
   },
-  messages::renoise::to::{MessageToRenoise, SetParameterValue},
+  messages::renoise::to::SetParameterValue,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -27,8 +27,8 @@ impl Default for ParameterValue {
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
 pub struct CycleEffectParameterValue {
   pub track: Channel,
-  pub effect: u64,
-  pub param: u64,
+  pub effect: u16,
+  pub param: u16,
   pub default: usize,
   pub cycles: Vec<ParameterValue>,
 }
@@ -84,12 +84,15 @@ impl ActionDescriptor for CycleEffectParameterValue {
           .cycles
           .get(n)
           .ok_or(anyhow::Error::msg("no such cycle"))?;
-        Ok(vec![MessageToRenoise::build(SetParameterValue {
-          track: self.track.to_renoise_number(),
-          effect: self.effect,
-          parameter: self.param,
-          value: c.value,
-        })?])
+        Ok(vec![
+          SetParameterValue {
+            track: self.track.to_renoise_number(),
+            effect: self.effect,
+            parameter: self.param,
+            value: c.value,
+          }
+          .into(),
+        ])
       }
       _ => Err(anyhow::Error::msg("invalid value")),
     }

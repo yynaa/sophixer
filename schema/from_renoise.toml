@@ -1,0 +1,7 @@
+name = "message_from_renoise"
+
+[commands.hello]
+id = 1
+
+[commands.goodbye]
+id = 2

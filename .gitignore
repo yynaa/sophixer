@@ -26,3 +26,6 @@ sets/
 
 .env
 .gen
+
+# renoise message generated files
+renoise/xyz.yyna.Calcium.xrnx/messages/

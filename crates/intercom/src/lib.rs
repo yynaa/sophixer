@@ -53,12 +53,12 @@ pub(crate) fn extract_prefix(mut bytes: Vec<u8>) -> Result<(u8, Vec<u8>), InterE
 
 /// trait for messages coming from clients
 #[async_trait::async_trait]
-pub trait InterMessageIncoming: Send + Sized {
+pub trait InterMessageIncoming: Send + Sized + std::fmt::Debug {
   fn deserialize(bytes: Vec<u8>) -> Option<Self>;
 }
 
 /// trait for message going to clients
 #[async_trait::async_trait]
-pub trait InterMessageOutgoing: Send + Sized {
+pub trait InterMessageOutgoing: Send + Sized + std::fmt::Debug {
   fn serialize(&self) -> Option<Vec<u8>>;
 }
